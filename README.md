@@ -17,6 +17,8 @@
                     #pip install psycopg2-binary
                     #pip install pydantic
     -optionnel: pgadmin
+    -lancer backend : uvicorn main:app --reload
+                    ny base de donnée dia créer automatiquement rehefa lancé io. Postgresql necessaire.
     Version 0.1 : Ajout eleve fonctionnel , Appelle eleve par id fonctionnel , Appelle List eleve foncionnelle
     pour frontend : route fonctionnelle  "route_eleve".
     Version 0.2 : route cours , eleve , presence fonctionnel . 

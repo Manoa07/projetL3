@@ -1,7 +1,11 @@
-from unittest.mock import Base
+from DB.database import Base
+from sqlalchemy import Integer, Column,String,Boolean,ForeignKey,Date
 
-from sqlalchemy import Integer, column
 
-
-class eleve(Base):
-    id=column(Integer,primary_key=True)
+class Cours(Base):
+    __tablename__= 'cours'
+    Id_cours=Column(Integer,primary_key=True,autoincrement=True, index=True)
+    Nom_cours=Column(String)
+    Professeur_cours=Column(String)
+    Date_cours=Column(Date)
+s

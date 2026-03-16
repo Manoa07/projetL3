@@ -27,7 +27,7 @@ def get_eleves(db:db_dependancy):
     return eleve_res
 
 
-@router.get("/{eleve_id}")
-def get_eleve(eleve_id: int, db:db_dependancy):
-    eleve= db.query(Eleve).filter(Eleve.Id_eleve == eleve_id).first()
+@router.get("/{eleve_numero}")
+def get_eleve(eleve_numero: int, db:db_dependancy):
+    eleve= db.query(Eleve).filter(Eleve.Numero == eleve_numero).first()
     return eleve

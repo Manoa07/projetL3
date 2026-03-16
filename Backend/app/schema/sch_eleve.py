@@ -1,24 +1,33 @@
 import datetime
 from typing import Optional
 from pydantic import BaseModel
-from uuid import UUID, uuid4
-
 
 class Create_eleve(BaseModel):
-    Nom: str 
-    Prenom:str
-    Classe:str
-    Numero:int
+    Nom_eleve: str 
+    Prenom_eleve:str
+    Classe_eleve:str
+    Numero_eleve:int
+    class Config:
+        from_attribute = True
+class eleve_Classe_Nom(BaseModel):
+    Prenom_eleve:str
+    Classe_eleve:str
+    Numero_eleve:int
 
 class Reponse_eleve(BaseModel):
-    id:int
-    Nom: str 
-    Prenom:str
-    Classe:str
-    Numero:int
+    Id_eleve:int
+    Nom_eleve: str 
+    Prenom_eleve:str
+    Classe_eleve:str
+    Numero_eleve:int
     class config:
         from_attributes=True
 
 
 class Id_eleve(BaseModel):
-    id:int
+    Nom_eleve: str 
+    Prenom_eleve:str
+    Classe_eleve:str
+    Numero_eleve:int
+    class config:
+        from_attributes=True

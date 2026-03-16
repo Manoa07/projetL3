@@ -1,6 +1,6 @@
 from DB.database import Base
 from sqlalchemy import Integer, Column,String,Boolean,ForeignKey
-
+from sqlalchemy.orm import relationship
 
 class Eleve(Base):
     __tablename__= 'eleve'
@@ -8,4 +8,5 @@ class Eleve(Base):
     Nom_eleve=Column(String)
     Prenom_eleve=Column(String)
     Classe_eleve=Column(String)
-    Numero=Column(Integer)
+    Numero_eleve=Column(Integer)
+    presence=relationship("Presence", back_populates="eleve")

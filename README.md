@@ -17,6 +17,15 @@
     -optionnel: pgadmin
     Version 0.1 : Ajout eleve fonctionnel , Appelle eleve par id fonctionnel , Appelle List eleve foncionnelle
     pour frontend : route fonctionnelle  "route_eleve".
+    Version 0.2 : route cours , eleve , presence fonctionnel . 
+                -requete possible : * Ajout eleve fonctionnel ,
+                                    * Appelle eleve par id fonctionnel , 
+                                    * Appelle List eleve,
+                                    * Creer cours
+                                    * get list cours
+                                    * creer presence
+                                    * afficher list presence specifique d'un eleve(date/heure/status)
+                                    * afficher derniere presence d'un eleve (date/heure/status)
 
 #Posture detectable
 

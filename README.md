@@ -7,7 +7,9 @@
 
 
 #Frontend:
-
+# **environnement de devellopement**
+```
+    pip install PyQt6
 #Backend:
     -recquis : Sqlalchemy ,pydantic ,fastapi , python, postgresql , postman
         .commande : #pip install fastapi

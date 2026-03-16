@@ -11,10 +11,14 @@ class Create_eleve(BaseModel):
     Numero:int
 
 class Reponse_eleve(BaseModel):
+    id:int
     Nom: str 
     Prenom:str
     Classe:str
     Numero:int
+    class config:
+        from_attributes=True
+
 
 class Id_eleve(BaseModel):
     id:int

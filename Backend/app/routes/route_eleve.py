@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import Depends,APIRouter
 from sqlalchemy.orm import Session
 from DB.database import db_dependancy
@@ -19,7 +21,7 @@ def create_eleve(eleve: Create_eleve, db:db_dependancy):
     return new_eleve
 
 
-@router.get("/")
+@router.get("/",response_model=List[Reponse_eleve])
 def get_eleves(db:db_dependancy):
     eleve_res = db.query(Eleve).all()
     return eleve_res
@@ -27,4 +29,5 @@ def get_eleves(db:db_dependancy):
 
 @router.get("/{eleve_id}")
 def get_eleve(eleve_id: int, db:db_dependancy):
-    eleve= db.query(Eleve).filter(Eleve.Id_eleve == eleve_id).first
+    eleve= db.query(Eleve).filter(Eleve.Id_eleve == eleve_id).first()
+    return eleve

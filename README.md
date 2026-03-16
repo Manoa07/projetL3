@@ -9,6 +9,14 @@
 #Frontend:
 
 #Backend:
+    -recquis : Sqlalchemy ,pydantic ,fastapi , python, postgresql , postman
+        .commande : #pip install fastapi
+                    #pip install sqlalchemy
+                    #pip install psycopg2-binary
+                    #pip install pydantic
+    -optionnel: pgadmin
+    Version 0.1 : Ajout eleve fonctionnel , Appelle eleve par id fonctionnel , Appelle List eleve foncionnelle
+    pour frontend : route fonctionnelle  "route_eleve".
 
 #Posture detectable
 

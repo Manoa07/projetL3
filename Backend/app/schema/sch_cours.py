@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from pydantic import BaseModel
 
 class Create_cours(BaseModel):
@@ -18,5 +17,5 @@ class Reponse_cours(BaseModel):
     Professeur_cours: str
     Date_cours :datetime
     Salle_cours:str
-    class config:
+    class Config:
         from_attributes=True

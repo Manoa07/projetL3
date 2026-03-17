@@ -1,5 +1,5 @@
 from DB.database import Base
-from sqlalchemy import Integer, Column,String,Boolean,ForeignKey,DateTime
+from sqlalchemy import Integer, Column,String,DateTime
 from sqlalchemy.orm import relationship
 
 class Cours(Base):

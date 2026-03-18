@@ -6,7 +6,7 @@ from schema.sch_cours import Create_cours, Reponse_cours
 from models.cours import Cours
 router= APIRouter(prefix="/cours",tags=["Cours"])
 
-@router.post("/")
+@router.post("/create")
 def create_cours(cours: Create_cours, db:db_dependancy):
     new_cours = Cours(
         Nom_cours = cours.Nom_cours,
@@ -19,7 +19,7 @@ def create_cours(cours: Create_cours, db:db_dependancy):
     db.refresh(new_cours)
     return new_cours
 
-@router.get("/",response_model=List[Reponse_cours])
+@router.get("/all",response_model=List[Reponse_cours])
 def get_cours(db:db_dependancy):
     cours_res = db.query(Cours).all()
     return cours_res

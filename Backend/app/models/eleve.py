@@ -10,3 +10,4 @@ class Eleve(Base):
     Classe_eleve=Column(String)
     Numero_eleve=Column(Integer)
     presence=relationship("Presence", back_populates="eleve")
+    surveillance=relationship("Surveillance",back_populates="eleve")

@@ -6,6 +6,11 @@ include/
 lib64/
 pyvenv.cfg
 share/
+venv/
+.venv/
+postman/
+__pycache__/
+*.sql
 
 
 

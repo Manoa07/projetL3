@@ -7,7 +7,7 @@ from schema.sch_eleve import Create_eleve , Reponse_eleve ,Id_eleve
 from models.eleve import Eleve
 router= APIRouter(prefix="/eleve",tags=["Eleves"])
 
-@router.post("/")
+@router.post("/create")
 def create_eleve(eleve: Create_eleve, db:db_dependancy):
     new_eleve = Eleve(
         Nom_eleve = eleve.Nom_eleve,
@@ -27,7 +27,7 @@ def get_eleves(db:db_dependancy):
     return eleve_res
 
 
-@router.get("/{eleve_numero}",response_model=Id_eleve)
+@router.get("/numero/{eleve_numero}",response_model=Id_eleve)
 def get_eleve_id(eleve_numero: int, db:db_dependancy):
     eleve= db.query(Eleve).filter(Eleve.Numero_eleve == eleve_numero).first()
     return eleve

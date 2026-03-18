@@ -10,7 +10,7 @@ class ElevesView(QWidget):
         layout.addWidget(QLabel("<b style='color:#4facfe; font-size:18px;'>LISTE DES ÉLÈVES - ISAIA L3</b>"))
         
         self.table = QTableWidget(4, 3)
-        self.table.setHorizontalHeaderLabels(["N°", "Nom et Prénoms", "Statut Identification"])
+        self.table.setHorizontalHeaderLabels(["N°", "Nom et Prénoms", "Classe"])
         self.table.setStyleSheet("background-color: #1a1c2e; color: white;")
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self.table)

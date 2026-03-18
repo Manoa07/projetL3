@@ -1,101 +1,79 @@
 import sys
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, 
-                             QVBoxLayout, QPushButton, QStackedWidget, 
-                             QScrollArea, QLabel, QFrame)
+from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QFrame
 from PyQt6.QtCore import Qt
 
-# Importation des composants et des vues (vos nouveaux fichiers)
-from components.alertCard import AlertCard
-from views.liveView import LiveView
-from views.elevesView import ElevesView
-from views.statsView import StatsView
+# Importation de vos nouveaux modules séparés
+from interface.surveillanceInterface import SurveillanceInterface
+from interface.presenceInterface import PresenceInterface
 
 class ExamGuardApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ExamGuard AI - Dashboard")
+        self.setWindowTitle("Système de Surveillance Intelligent")
         self.resize(1280, 850)
         self.setStyleSheet("background-color: #0f111a; color: white; font-family: 'Segoe UI';")
         self.init_ui()
 
     def init_ui(self):
-        main_layout = QHBoxLayout()
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        # Layout principal : contiendra uniquement le StackedWidget
+        self.central_layout = QVBoxLayout()
+        self.central_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 1. BARRE LATÉRALE (Navigation)
-        sidebar = QFrame()
-        sidebar.setFixedWidth(100)
-        sidebar.setStyleSheet("background-color: #1a1c2e; border-right: 1px solid #2d2f41;")
-        sidebar_layout = QVBoxLayout(sidebar)
+        self.stack = QStackedWidget()
+
+        # --- INDEX 0 : ACCUEIL ---
+        self.stack.addWidget(self.create_home_menu())
+
+        # --- INDEX 1 : SURVEILLANCE (Le fichier séparé) ---
+        # On passe self.return_to_home pour que le bouton retour fonctionne
+        self.surveillance_ui = SurveillanceInterface(self.return_to_home)
+        self.stack.addWidget(self.surveillance_ui)
+
+        # --- INDEX 2 : PRÉSENCE (Le fichier séparé) ---
+        self.presence_ui = PresenceInterface(self.return_to_home)
+        self.stack.addWidget(self.presence_ui)
+
+        # Installation du Stack dans la fenêtre
+        container = QWidget()
+        container.setLayout(self.central_layout)
+        self.central_layout.addWidget(self.stack)
+        self.setCentralWidget(container)
+
+    def create_home_menu(self):
+        """Crée l'interface avec les 2 gros boutons"""
+        home_widget = QWidget()
+        layout = QVBoxLayout(home_widget)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        title = QLabel("GESTION DE L'INTERFACE")
+        title.setStyleSheet("font-size: 28px; font-weight: bold; color: #4facfe; margin-bottom: 40px;")
+        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        btn_layout = QHBoxLayout()
         
-        btn_style = """
-            QPushButton { background: transparent; border: none; color: #7a7c8c; font-size: 11px; padding: 10px; }
-            QPushButton:checked { background: #24273d; color: #4facfe; border-left: 3px solid #4facfe; }
+        style = """
+            QPushButton {
+                background-color: #1a1c2e; border: 2px solid #2d2f41; border-radius: 20px;
+                color: white; font-size: 20px; font-weight: bold; padding: 60px; min-width: 250px;
+            }
+            QPushButton:hover { background-color: #24273d; border-color: #4facfe; }
         """
 
-        # Boutons de navigation
-        self.btn_live = self.create_nav_btn("📺\nLive", btn_style, 1)
-        self.btn_eleves = self.create_nav_btn("👥\nÉlèves", btn_style, 2)
-        self.btn_stats = self.create_nav_btn("📊\nPrésence", btn_style, 3)
-        
-        sidebar_layout.addWidget(self.btn_live)
-        sidebar_layout.addWidget(self.btn_eleves)
-        sidebar_layout.addWidget(self.btn_stats)
-        sidebar_layout.addStretch()
-        main_layout.addWidget(sidebar)
+        btn_surv = QPushButton("🛡️ SURVEILLANCE")
+        btn_surv.setStyleSheet(style)
+        btn_surv.clicked.connect(lambda: self.stack.setCurrentIndex(1))
 
-        # 2. ZONE CENTRALE (Conteneur des vues)
-        self.stack = QStackedWidget()
-        
-        # Ajout des pages depuis les fichiers du dossier views/
-        self.stack.addWidget(QLabel("Veuillez sélectionner une section")) # Index 0
-        self.stack.addWidget(LiveView())   # Index 1 (depuis liveView.py) [cite: 4, 6]
-        self.stack.addWidget(ElevesView()) # Index 2 (depuis elevesView.py) [cite: 5, 26, 27, 28, 29]
-        self.stack.addWidget(StatsView())  # Index 3 (depuis statsView.py) [cite: 8, 14, 35]
-        
-        main_layout.addWidget(self.stack, stretch=5)
+        btn_pres = QPushButton("👥 PRÉSENCE")
+        btn_pres.setStyleSheet(style)
+        btn_pres.clicked.connect(lambda: self.stack.setCurrentIndex(2))
 
-        # 3. PANNEAU D'ALERTES (Toujours visible à droite)
-        self.setup_alerts_panel(main_layout)
-
-        central_widget = QWidget()
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
-
-    def create_nav_btn(self, text, style, index):
-        btn = QPushButton(text)
-        btn.setCheckable(True)
-        btn.setFixedSize(100, 80)
-        btn.setStyleSheet(style)
-        btn.clicked.connect(lambda: self.switch_page(index))
-        return btn
-
-    def setup_alerts_panel(self, layout):
-        alerts_panel = QFrame()
-        alerts_panel.setFixedWidth(280)
-        alerts_panel.setStyleSheet("background-color: #1a1c2e; border-left: 1px solid #2d2f41;")
-        alerts_layout = QVBoxLayout(alerts_panel)
-        alerts_layout.addWidget(QLabel("<b>FIL D'ALERTES</b>"))
+        btn_layout.addWidget(btn_surv)
+        btn_layout.addSpacing(40)
+        btn_layout.addWidget(btn_pres)
         
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("background: transparent; border: none;")
-        container = QWidget()
-        scroll_layout = QVBoxLayout(container)
-        scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        
-        # Alertes par défaut (peuvent être liées au backend plus tard) [cite: 33]
-        scroll_layout.addWidget(AlertCard("Smartphone détecté", "14:05", True))
-        scroll_layout.addWidget(AlertCard("Posture suspecte", "14:02"))
-        
-        scroll.setWidget(container)
-        alerts_layout.addWidget(scroll)
-        layout.addWidget(alerts_panel)
+        layout.addLayout(btn_layout)
+        return home_widget
 
-    def switch_page(self, index):
-        """Gère l'affichage de la vue sélectionnée"""
-        self.btn_live.setChecked(index == 1)
-        self.btn_eleves.setChecked(index == 2)
-        self.btn_stats.setChecked(index == 3)
-        self.stack.setCurrentIndex(index)
+    def return_to_home(self):
+        """Fonction de rappel utilisée par les fichiers séparés"""
+        self.stack.setCurrentIndex(0)

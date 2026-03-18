@@ -1,5 +1,5 @@
 from DB.database import Base
-from sqlalchemy import Integer, Column,String,Boolean,ForeignKey
+from sqlalchemy import Integer, Column,String
 from sqlalchemy.orm import relationship
 
 class Eleve(Base):
@@ -10,3 +10,4 @@ class Eleve(Base):
     Classe_eleve=Column(String)
     Numero_eleve=Column(Integer)
     presence=relationship("Presence", back_populates="eleve")
+    surveillance=relationship("Surveillance",back_populates="eleve")

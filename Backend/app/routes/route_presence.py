@@ -1,13 +1,11 @@
 from typing import List
-
-from fastapi import Depends,APIRouter
-
+from fastapi import APIRouter
 from DB.database import db_dependancy
-from schema.sch_presence import Create_presence , Reponse_presence ,Presence_eleve
+from schema.sch_presence import Create_presence,Presence_eleve
 from models.presence import Presence
 router= APIRouter(prefix="/presence",tags=["Presence"])
 
-@router.post("/")
+@router.post("/create")
 def create_presence(presence: Create_presence, db:db_dependancy):
     new_presence= Presence(
         id_cours=presence.id_cours,

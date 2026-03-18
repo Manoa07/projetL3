@@ -1,5 +1,3 @@
-import datetime
-from typing import Optional
 from pydantic import BaseModel
 
 class Create_eleve(BaseModel):
@@ -15,12 +13,12 @@ class eleve_Classe_Nom(BaseModel):
     Numero_eleve:int
 
 class Reponse_eleve(BaseModel):
-    Id_eleve:int
+    Numero_eleve:int
     Nom_eleve: str 
     Prenom_eleve:str
     Classe_eleve:str
-    Numero_eleve:int
-    class config:
+    
+    class Config:
         from_attributes=True
 
 
@@ -29,5 +27,5 @@ class Id_eleve(BaseModel):
     Prenom_eleve:str
     Classe_eleve:str
     Numero_eleve:int
-    class config:
+    class Config:
         from_attributes=True

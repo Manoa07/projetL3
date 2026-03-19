@@ -1,406 +1,315 @@
-import os
-import sqlite3
-import time
-import datetime
-
-from insightface.app import FaceAnalysis
 import cv2
+import numpy as np
+from mtcnn import MTCNN
+from datetime import datetime, timedelta
+import pickle
+from keras_facenet import FaceNet
+import sqlite3
 
-try:
-    import face_recognition  # type: ignore
-except Exception as e:
-    print(e)  # pragma: no cover
-    face_recognition = None
-    _FACE_IMPORT_ERROR = e
-else:
-    _FACE_IMPORT_ERROR = None
-
-
-def _db_path():
-    # Use the DB at the repo root: D:/ProjetL3/presence.sql (stable regardless of cwd).
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "presence.sql"))
-
-
-def _repo_root():
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-
-def _resolve_photo_path(photo_path: str) -> str:
+class SystemePresence:
     """
-    Resolve a photo path stored in DB:
-    - absolute path: keep as-is
-    - relative path: first try relative to repo root
-    - if still not found: try repo_root/image/<photo_path>
+    Système de présence par reconnaissance faciale avec base SQLite.
     """
-    if os.path.isabs(photo_path):
-        return photo_path
 
-    root = _repo_root()
-    candidate = os.path.join(root, photo_path)
-    if os.path.exists(candidate):
-        return candidate
-
-    candidate2 = os.path.join(root, "image", photo_path)
-    if os.path.exists(candidate2):
-        return candidate2
-
-    return candidate  # default best-effort
-
-
-def _normalize_photo_for_db(photo: str) -> str:
-    """
-    Normalize user input so 'photo' can be just a filename in image/.
-    Prefer storing a relative path like 'image/<file>' when possible.
-    """
-    if os.path.isabs(photo):
-        return photo
-
-    root = _repo_root()
-    as_rel = os.path.join(root, photo)
-    if os.path.exists(as_rel):
-        return photo
-
-    in_image = os.path.join(root, "image", photo)
-    if os.path.exists(in_image):
-        return os.path.join("image", photo)
-
-    return photo
-
-
-def get_conn():
-    conn = sqlite3.connect(_db_path())
-    conn.execute("PRAGMA foreign_keys = ON;")
-    return conn
-
-
-def init_db(conn: sqlite3.Connection):
-    cur = conn.cursor()
-    cur.execute(
+    def __init__(self, seuil_distance=0.8, db_path='presence.db'):
         """
-        CREATE TABLE IF NOT EXISTS Etudiants (
-            idEtudiant INTEGER PRIMARY KEY AUTOINCREMENT,
-            Nom TEXT NOT NULL,
-            Prenom TEXT NOT NULL,
-            NombreAbsences INTEGER DEFAULT 0,
-            NombreRetards INTEGER DEFAULT 0,
-            NombrePresences INTEGER DEFAULT 0,
-            Photo TEXT NOT NULL
-        )
+        Initialise les modèles et la connexion à la base.
+
+        Args:
+            seuil_distance (float): Seuil de distance pour considérer une correspondance.
+            db_path (str): Chemin vers le fichier SQLite.
         """
-    )
+        self.seuil = seuil_distance
+        self.db_path = db_path
 
-    # Lightweight migrations for existing DBs (SQLite doesn't auto-add columns).
-    cur.execute("PRAGMA table_info(Etudiants)")
-    existing_cols = {row[1] for row in cur.fetchall()}  # row[1] = column name
-    if "NombrePresences" not in existing_cols:
-        cur.execute("ALTER TABLE Etudiants ADD COLUMN NombrePresences INTEGER DEFAULT 0")
+        # Connexion à la base
+        self.conn = self.connect_db()
+        self.creer_tables()
 
-    # Presence table: one row per student per day (de-dup by UNIQUE).
-    # If an older/broken schema exists, migrate it in-place.
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Presence'")
-    presence_exists = cur.fetchone() is not None
+        # Détecteur de visages MTCNN
+        self.detector = MTCNN()
 
-    if not presence_exists:
-        cur.execute(
-            """
-            CREATE TABLE Presence (
-                idPresence INTEGER PRIMARY KEY AUTOINCREMENT,
-                idEtudiant INTEGER NOT NULL,
-                Date_presence TEXT NOT NULL,
-                Heure_presence TEXT NOT NULL,
-                Status_presence TEXT NOT NULL,
-                FOREIGN KEY (idEtudiant) REFERENCES Etudiants (idEtudiant),
-                UNIQUE (idEtudiant, Date_presence)
-            )
-            """
-        )
-    else:
-        cur.execute("PRAGMA table_info(Presence)")
-        cols = cur.fetchall()
-        # PRAGMA columns: (cid, name, type, notnull, dflt_value, pk)
-        col_by_name = {c[1]: c for c in cols}
-        pk_col = None
-        for c in cols:
-            if int(c[5]) == 1:
-                pk_col = c[1]
-                break
+        # Modèle d'embedding
+        print("Chargement du modèle FaceNet (keras-facenet)...")
+        self.embedder = FaceNet()
+        print("Modèle chargé avec succès.")
 
-        needs_migration = (
-            "idPresence" not in col_by_name
-            or "idEtudiant" not in col_by_name
-            or pk_col != "idPresence"
-        )
+        # Charger la base des embeddings (cache)
+        self.base_visages = self.charger_base()
 
-        if needs_migration:
-            # Create new correct table, copy best-effort data, swap.
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS Presence_new (
-                    idPresence INTEGER PRIMARY KEY AUTOINCREMENT,
-                    idEtudiant INTEGER NOT NULL,
-                    Date_presence TEXT NOT NULL,
-                    Heure_presence TEXT NOT NULL,
-                    Status_presence TEXT NOT NULL,
-                    FOREIGN KEY (idEtudiant) REFERENCES Etudiants (idEtudiant),
-                    UNIQUE (idEtudiant, Date_presence)
-                )
-                """
-            )
-            # Copy only the columns that exist in the old table.
-            cur.execute(
-                """
-                INSERT OR IGNORE INTO Presence_new (idEtudiant, Date_presence, Heure_presence, Status_presence)
-                SELECT idEtudiant, Date_presence, Heure_presence, Status_presence
-                FROM Presence
-                """
-            )
-            cur.execute("DROP TABLE Presence")
-            cur.execute("ALTER TABLE Presence_new RENAME TO Presence")
+        # Dictionnaire pour éviter les enregistrements trop fréquents (2h30)
+        self.dernier_enregistrement = {}  # {nom_complet: datetime}
 
-    # Ensure a UNIQUE index exists even if the table was created earlier without it.
-    cur.execute(
-        """
-        CREATE UNIQUE INDEX IF NOT EXISTS ux_presence_student_day
-        ON Presence (idEtudiant, Date_presence)
-        """
-    )
-    conn.commit()
-
-
-def ajouter_etudiant(nom: str, prenom: str, photo: str) -> int:
-    """
-    Add a student with an image path (Photo).
-    Returns the created student's idEtudiant.
-    """
-    with get_conn() as conn:
-        init_db(conn)
-        cur = conn.cursor()
-        photo_db = _normalize_photo_for_db(photo)
-        cur.execute(
-            """
-            INSERT INTO Etudiants (Nom, Prenom, Photo)
-            VALUES (?, ?, ?)
-            """,
-            (nom, prenom, photo_db),
-        )
-        conn.commit()
-        return int(cur.lastrowid)
-
-
-def supprimer_etudiant(id_etudiant: int) -> bool:
-    """
-    Delete a student (and their Presence rows) by idEtudiant.
-    Returns True if a student row was deleted, else False.
-    """
-    with get_conn() as conn:
-        init_db(conn)
-        cur = conn.cursor()
-
-        # Keep DB consistent even if FK constraints were disabled earlier.
-        cur.execute("DELETE FROM Presence WHERE idEtudiant = ?", (id_etudiant,))
-        cur.execute("DELETE FROM Etudiants WHERE idEtudiant = ?", (id_etudiant,))
-        conn.commit()
-        return cur.rowcount > 0
-
-
-def _load_known_faces(conn: sqlite3.Connection):
-    if face_recognition is None:
-        # Caller may choose to run detection-only mode.
-        return [], [], []
-
-    cur = conn.cursor()
-    cur.execute("SELECT idEtudiant, Prenom, Photo FROM Etudiants")
-    rows = cur.fetchall()
-
-    known_encodings = []
-    known_ids = []
-    known_labels = []  # ne contient que le prénom pour l'affichage
-
-    for (sid, prenom, photo_path) in rows:
-        full_path = _resolve_photo_path(photo_path)
-
-        if not os.path.exists(full_path):
-            continue
-
+    def connect_db(self):
+        """Établit la connexion SQLite."""
         try:
-            img = face_recognition.load_image_file(full_path)
-            encs = face_recognition.face_encodings(img)
-        except Exception:
-            continue
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            print("Connexion à SQLite établie.")
+            return conn
+        except Exception as e:
+            print(f"Erreur de connexion : {e}")
+            return None
 
-        if len(encs) != 1:
-            # Skip ambiguous photos (no face or multiple faces).
-            continue
+    def creer_tables(self):
+        """Crée les tables si elles n'existent pas."""
+        if not self.conn:
+            return
+        cur = self.conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS eleves (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nom VARCHAR(100) NOT NULL,
+                prenom VARCHAR(100) NOT NULL,
+                embedding BLOB NOT NULL,
+                date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS presences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id_eleve INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+                date_presence DATE NOT NULL,
+                heure_presence TIME NOT NULL,
+                UNIQUE(id_eleve, date_presence)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS absences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id_eleve INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
+                date_absence DATE NOT NULL,
+                justifie BOOLEAN DEFAULT FALSE,
+                UNIQUE(id_eleve, date_absence)
+            )
+        """)
+        self.conn.commit()
+        cur.close()
+        print("Tables vérifiées/créées.")
 
-        known_encodings.append(encs[0])
-        known_ids.append(int(sid))
-        known_labels.append(prenom.strip())  # seulement le prénom
+    def charger_base(self):
+        """Charge les embeddings depuis la base pour la comparaison rapide."""
+        if not self.conn:
+            return {}
+        cur = self.conn.cursor()
+        cur.execute("SELECT id, nom, prenom, embedding FROM eleves")
+        rows = cur.fetchall()
+        cur.close()
+        base = {}
+        for row in rows:
+            emb_blob = row[3]
+            emb = pickle.loads(emb_blob)
+            nom_complet = f"{row[1]} {row[2]}"
+            base[nom_complet] = (row[0], emb)
+        return base
 
-    return known_encodings, known_ids, known_labels
+    def obtenir_embedding(self, image_visage):
+        """Calcule l'embedding d'un visage."""
+        return self.embedder.embeddings([image_visage])[0]
 
-
-def _mark_present_once(conn: sqlite3.Connection, student_id: int):
-    """
-    Inserts presence for today if missing; increments NombrePresences only when inserted.
-    Returns True if it was a new 'present' for today, False if it already existed.
-    """
-    today = datetime.date.today().isoformat()
-    now_t = datetime.datetime.now().time().strftime("%H:%M:%S")
-
-    cur = conn.cursor()
-    cur.execute(
+    def comparer_visage(self, embedding):
         """
-        INSERT OR IGNORE INTO Presence (idEtudiant, Date_presence, Heure_presence, Status_presence)
-        VALUES (?, ?, ?, 'Present')
-        """,
-        (student_id, today, now_t),
-    )
-    inserted = cur.rowcount == 1
+        Compare un embedding avec la base de données.
 
-    if inserted:
-        cur.execute(
-            """
-            UPDATE Etudiants
-            SET NombrePresences = COALESCE(NombrePresences, 0) + 1
-            WHERE idEtudiant = ?
-            """,
-            (student_id,),
-        )
-        conn.commit()
+        Returns:
+            tuple: (nom_complet, distance, id_eleve) ou (None, None, None)
+        """
+        if not self.base_visages:
+            return None, None, None
 
-    return inserted
+        min_dist = float('inf')
+        identite = None
+        id_eleve = None
 
+        for nom, (eid, emb_ref) in self.base_visages.items():
+            dist = np.linalg.norm(embedding - emb_ref)
+            if dist < min_dist:
+                min_dist = dist
+                identite = nom
+                id_eleve = eid
 
-def verifier_presence(tolerance: float = 0.4, camera_index: int = 0):
-    """
-    Live webcam:
-    - Detect + recognize faces with a stricter tolerance (0.4 by default) for higher precision.
-    - If recognized and in DB: display 'Present - <prenom>' and mark attendance once per day.
-    - If not recognized: keep streaming.
-    - Exit with 'q'.
-    """
-    # If face_recognition isn't installed, keep the webcam running in detection-only mode.
-    if face_recognition is None:
-        return verifier_presence_detection_only(camera_index=camera_index)
+        if min_dist < self.seuil:
+            return identite, min_dist, id_eleve
+        else:
+            return None, None, None
 
-    with get_conn() as conn:
-        init_db(conn)
-        known_encodings, known_ids, known_labels = _load_known_faces(conn)
+    def enregistrer_presence_db(self, id_eleve, nom_complet):
+        """
+        Enregistre la présence dans la table presences.
+        Vérifie d'abord si l'élève n'a pas déjà une présence aujourd'hui (unicité).
+        """
+        maintenant = datetime.now()
+        date_auj = maintenant.date().isoformat()
+        heure_act = maintenant.time().isoformat()
 
-        cap = cv2.VideoCapture(camera_index)
+        cur = self.conn.cursor()
+        try:
+            cur.execute("""
+                INSERT INTO presences (id_eleve, date_presence, heure_presence)
+                VALUES (?, ?, ?)
+            """, (id_eleve, date_auj, heure_act))
+            self.conn.commit()
+            print(f"Présence enregistrée pour {nom_complet} à {heure_act}")
+        except sqlite3.IntegrityError:
+            self.conn.rollback()
+            print(f"{nom_complet} a déjà une présence aujourd'hui.")
+        finally:
+            cur.close()
+
+    def run(self, source=0):
+        """
+        Lance la boucle principale de reconnaissance.
+        """
+        cap = cv2.VideoCapture(source)
         if not cap.isOpened():
-            raise RuntimeError("Cannot open webcam.")
+            print("Erreur : impossible d'ouvrir la caméra.")
+            return
 
-        last_seen = {}  # student_id -> last_mark_ts (avoid rapid repeats even with DB IGNORE)
-        min_mark_interval_s = 9000.0  # 2.5 heures
+        print("Démarrage de la reconnaissance. Appuyez sur 'q' pour quitter.")
 
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
 
-            if face_recognition is None:
-                break
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            try:
+                detections = self.detector.detect_faces(rgb_frame)
+            except Exception as e:
+                print(f"Erreur de détection (ignorée) : {e}")
+                detections = []
 
-            # Speed-up: downscale for recognition, then scale boxes back.
-            small = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-            rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+            for det in detections:
+                x, y, w, h = det['box']
+                x, y = max(0, x), max(0, y)
+                w = min(w, frame.shape[1] - x)
+                h = min(h, frame.shape[0] - y)
 
-            face_locations = face_recognition.face_locations(rgb_small, model="hog")
-            face_encodings = face_recognition.face_encodings(rgb_small, face_locations)
+                face = rgb_frame[y:y+h, x:x+w]
+                if face.size == 0:
+                    continue
 
-            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-                # Scale back up.
-                top *= 4
-                right *= 4
-                bottom *= 4
-                left *= 4
+                embedding = self.obtenir_embedding(face)
+                nom, dist, id_eleve = self.comparer_visage(embedding)
 
-                label = "Unknown"
-                color = (0, 0, 255)
+                if nom:
+                    maintenant = datetime.now()
+                    if nom in self.dernier_enregistrement:
+                        delta = maintenant - self.dernier_enregistrement[nom]
+                        if delta < timedelta(hours=2, minutes=30):
+                            # Trop tôt, on n'enregistre pas
+                            label = f"{nom} (déjà présent)"
+                            couleur = (0, 255, 255)  # Jaune
+                        else:
+                            # Intervalle dépassé, on enregistre
+                            self.enregistrer_presence_db(id_eleve, nom)
+                            self.dernier_enregistrement[nom] = maintenant
+                            label = f"{nom} ({dist:.2f})"
+                            couleur = (0, 255, 0)  # Vert
+                    else:
+                        # Première détection
+                        self.enregistrer_presence_db(id_eleve, nom)
+                        self.dernier_enregistrement[nom] = maintenant
+                        label = f"{nom} ({dist:.2f})"
+                        couleur = (0, 255, 0)
+                else:
+                    label = "Inconnu"
+                    couleur = (0, 0, 255)  # Rouge
 
-                if known_encodings:
-                    matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=tolerance)
-                    face_distances = face_recognition.face_distance(known_encodings, face_encoding)
+                cv2.rectangle(frame, (x, y), (x+w, y+h), couleur, 2)
+                cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5, couleur, 2)
 
-                    best_idx = None
-                    if len(face_distances) > 0:
-                        best_idx = int(face_distances.argmin())
-
-                    if best_idx is not None and matches[best_idx]:
-                        student_id = known_ids[best_idx]
-                        student_label = known_labels[best_idx]  # prénom uniquement
-
-                        now = time.time()
-                        if now - last_seen.get(student_id, 0) >= min_mark_interval_s:
-                            _mark_present_once(conn, student_id)
-                            last_seen[student_id] = now
-
-                        label = f"Present - {student_label}"
-                        color = (0, 255, 0)
-
-                cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
-                cv2.rectangle(frame, (left, bottom - 30), (right, bottom), color, cv2.FILLED)
-                cv2.putText(
-                    frame,
-                    label,
-                    (left + 6, bottom - 8),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (0, 0, 0),
-                    2,
-                )
-
-            cv2.imshow("Verification de Presence", frame)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
+            cv2.imshow('Systeme de Presence', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         cap.release()
         cv2.destroyAllWindows()
 
+    def ajouter_eleve(self, nom, prenom, images_visages):
+        """
+        Ajoute un nouvel élève dans la base.
+        - Calcule l'embedding moyen à partir des images fournies.
+        - Stocke dans la table eleves.
+        - Met à jour le cache local.
+        """
+        embeddings = []
+        for img in images_visages:
+            emb = self.obtenir_embedding(img)
+            embeddings.append(emb)
+        emb_moyen = np.mean(embeddings, axis=0)
+        emb_blob = pickle.dumps(emb_moyen)
 
-def verifier_presence_detection_only(camera_index: int = 0):
+        cur = self.conn.cursor()
+        try:
+            cur.execute("""
+                INSERT INTO eleves (nom, prenom, embedding)
+                VALUES (?, ?, ?)
+            """, (nom, prenom, emb_blob))
+            self.conn.commit()
+            new_id = cur.lastrowid
+            print(f"Élève '{nom} {prenom}' ajouté avec l'id {new_id}.")
+            nom_complet = f"{nom} {prenom}"
+            self.base_visages[nom_complet] = (new_id, emb_moyen)
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Erreur lors de l'ajout : {e}")
+        finally:
+            cur.close()
+
+
+def capturer_images_visage(detector, nb_images=10):
     """
-    Webcam loop when face_recognition isn't installed:
-    - Detect faces (no identification)
-    - Keep streaming until 'q'
+    Ouvre la caméra et capture plusieurs images du visage.
+    Retourne la liste des images RGB.
     """
-    cap = cv2.VideoCapture(camera_index)
-    if not cap.isOpened():
-        raise RuntimeError("Cannot open webcam.")
-
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-
-    while True:
+    cap = cv2.VideoCapture(0)
+    images = []
+    print(f"Appuyez sur 'c' pour capturer ({nb_images} fois idéalement), 'q' pour quitter.")
+    while len(images) < nb_images:
         ret, frame = cap.read()
         if not ret:
             break
-
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4)
-
-        for (x, y, w, h) in faces:
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 255), 2)
-            cv2.putText(
-                frame,
-                "Face detectee",
-                (x, max(20, y - 10)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 255),
-                2,
-            )
-
-        cv2.imshow("Verification de Presence", frame)
+        cv2.imshow('Capture', frame)
         key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
+        if key == ord('c'):
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            faces = detector.detect_faces(rgb)
+            if faces:
+                x, y, w, h = faces[0]['box']
+                x, y = max(0, x), max(0, y)
+                face_img = rgb[y:y+h, x:x+w]
+                images.append(face_img)
+                print(f"Capture {len(images)}/{nb_images}")
+            else:
+                print("Aucun visage détecté.")
+        elif key == ord('q'):
             break
-
     cap.release()
     cv2.destroyAllWindows()
+    return images
 
 
 if __name__ == "__main__":
-    #verifier_presence()
-    verifier_presence_detection_only()
+    db_path = 'presence.db'
+    systeme = SystemePresence(seuil_distance=0.8, db_path=db_path)
+
+    print("\n=== SYSTÈME DE PRÉSENCE ===")
+    print("1. Ajouter un élève")
+    print("2. Lancer la reconnaissance")
+    choix = input("Votre choix (1 ou 2) : ")
+
+    if choix == "1":
+        nom = input("Nom de l'élève : ")
+        prenom = input("Prénom de l'élève : ")
+        print("Préparez-vous à être photographié.")
+        images = capturer_images_visage(systeme.detector, nb_images=10)
+        if len(images) >= 3:
+            systeme.ajouter_eleve(nom, prenom, images)
+        else:
+            print("Pas assez d'images valides.")
+    elif choix == "2":
+        systeme.run()
+    else:
+        print("Choix invalide.")

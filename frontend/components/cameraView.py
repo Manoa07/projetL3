@@ -1,23 +1,33 @@
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap, QImage
 
 class CameraView(QFrame):
     def __init__(self, name, overlay_type):
         super().__init__()
-        self.setStyleSheet("background-color: #1f2128; border: 2px solid #2d2f41; border-radius: 8px;")
+        self.setStyleSheet("background-color: #000000; border: 2px solid #2d2f41; border-radius: 8px;")
         layout = QVBoxLayout(self)
+        
+        # Header
         header = QHBoxLayout()
-        header.addWidget(QLabel(f"<b>{name}</b>"))
-        presence = QLabel("PRÉSENTS: 24/25")
-        presence.setStyleSheet("color: #2ecc71; font-weight: bold;")
+        header.addWidget(QLabel(f"<b style='color:white;'>{name}</b>"))
+        self.presence = QLabel("PRÉSENTS: --/--")
+        self.presence.setStyleSheet("color: #2ecc71; font-weight: bold;")
         header.addStretch()
-        header.addWidget(presence)
+        header.addWidget(self.presence)
         layout.addLayout(header)
-        center_label = QLabel("FLUX VIDÉO EN TEMPS RÉEL")
-        center_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        center_label.setStyleSheet("color: #454859; font-size: 14px; border: none;")
-        layout.addWidget(center_label)
+
+        # Zone d'affichage du flux
+        self.video_label = QLabel()
+        self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.video_label.setText("INITIALISATION DU FLUX...")
+        self.video_label.setStyleSheet("color: #454859; border: none;")
+        layout.addWidget(self.video_label)
+
         footer = QLabel(overlay_type)
         footer.setStyleSheet("color: #7a7c8c; font-size: 10px; border: none;")
-        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(footer)
+        layout.addWidget(footer, alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def update_frame(self, qt_image):
+        """Reçoit l'image du Thread et l'affiche"""
+        self.video_label.setPixmap(QPixmap.fromImage(qt_image))

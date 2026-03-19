@@ -1,9 +1,9 @@
 #Systeme de Surveillance Video Intelligent et de presence
 
 #installation opencv 
-
 #pip install opencv-contrib-python  
 #pip install opencv-python mediapipe
+#pip install opencv-python mtcnn keras-facenet 
 
 
 #Frontend:

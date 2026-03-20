@@ -105,16 +105,28 @@ class AjoutEleveView(QWidget):
             "Classe_eleve": self.classe.text(),
             "Numero_eleve": self.numero.text()
         }
-
+        files={}
+        if hasattr(self, 'photo_path')and self.photo_path:
+            files["photo"] = (
+                self.photo_path.split("/")[-1],
+                open(self.photo_path, "rb"),
+                "image/jpeg"
+            )
         if not self.nom.text() or not self.numero.text():
             return
 
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post("http://127.0.0.1:8000/eleve/create", json=data)
+                response = await client.post(
+                    "http://127.0.0.1:8000/eleve/create",
+                    data=data,
+                    files=files
+                    )
                 if response.status_code == 200:
                     global_signals.data_changed.emit()
                     self.clear_fields()
+                else:
+                    print("Erreur backend :", response.text)
         except Exception as e:
             print(f"Erreur : {e}")
 
@@ -129,7 +141,9 @@ class AjoutEleveView(QWidget):
 
     def upload_photo(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Sélectionner la photo", "", "Images (*.png *.jpg *.jpeg)")
+        
         if file_path:
+            self.photo_path=file_path
             pixmap = QPixmap(file_path)
             self.photo_label.setPixmap(pixmap.scaled(
                 self.photo_label.width(), 

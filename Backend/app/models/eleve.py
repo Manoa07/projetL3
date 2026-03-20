@@ -9,5 +9,6 @@ class Eleve(Base):
     Prenom_eleve=Column(String)
     Classe_eleve=Column(String)
     Numero_eleve=Column(Integer)
+    photo_eleve=Column(String)
     presence=relationship("Presence", back_populates="eleve")
     surveillance=relationship("Surveillance",back_populates="eleve")

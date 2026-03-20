@@ -5,6 +5,7 @@ import time
 import json
 import sys
 import tempfile
+import requests
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import PoseLandmarker
 from mediapipe.tasks.python.vision import PoseLandmarkerOptions
@@ -188,7 +189,7 @@ def detect_head_turn(points):
         # Original threshold: 40px. Now scale-aware for consistent behavior across resolutions/distances.
         thr = _scaled_threshold(scale, fallback_px=40, factor=0.33)
         if abs(nose[0] - center) > thr:
-            return "Tete tourn" 
+            return "Tete tourne" 
     return None
 
 # Détection main sous table
@@ -220,6 +221,34 @@ def detect_phone(points):
         if right_wrist and abs(right_wrist[0]-nose[0]) < thr_x and abs(right_wrist[1]-nose[1]) < thr_y:
             return "Telephone suspect"
     return None
+
+last_sent = {}  
+
+def send_alert_to_api(id_eleve, remarque):
+    key = f"{id_eleve}-{remarque}"
+    now = time.time()
+
+    # Anti-spam (5 secondes)
+    if key in last_sent and now - last_sent[key] < 5:
+        return
+
+    last_sent[key] = now
+
+    try:
+        data = {
+            "id_examen": 1,
+            "id_eleve": id_eleve,
+            "Status_examen": "suspect",
+            "Remarque": remarque
+        }
+
+        requests.post(
+            "http://127.0.0.1:8000/surveillance/create",
+            json=data,
+            timeout=2
+        )
+    except Exception as e:
+        print("Erreur API :", e)
 
 def main():
     global student_id_counter
@@ -391,6 +420,7 @@ def main():
                             (0, 0, 255),
                             2,
                         )
+                        send_alert_to_api(assigned_id,e)
                         y += 20
 
                 # Détection mouvements suspects déjà existante

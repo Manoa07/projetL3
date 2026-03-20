@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 
 class Eleve(Base):
     __tablename__= 'eleve'
-    Id_eleve=Column(Integer,primary_key=True,autoincrement=True,index =True)
+    Id_eleve=Column(Integer,primary_key=True,unique=True,autoincrement=True,index =True)
     Nom_eleve=Column(String)
     Prenom_eleve=Column(String)
     Classe_eleve=Column(String)

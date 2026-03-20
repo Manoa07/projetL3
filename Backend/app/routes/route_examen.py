@@ -1,26 +1,15 @@
 from typing import List
 
 from fastapi import APIRouter
-from datetime import datetime
 from DB.database import db_dependancy
 from schema.sch_examen import Create_examen, Voir_examens
-from models.examen import Examen
+from services.examen_service import create_examen,get_examen
 router= APIRouter(prefix="/examen",tags=["Examen"])
 
 @router.post("/create")
-def create_examen(examen : Create_examen , db : db_dependancy):
-    new_examen =Examen(
-        id_cours=examen.id_cours,
-        date_examen=examen.date_examen,
-        Heure_debut=examen.heure_debut,
-        Heure_fin=examen.heure_fin,
-        Salle_examen=examen.salle_examen
-    )
-    db.add(new_examen)
-    db.commit()
-    db.refresh(new_examen)
-    return new_examen
+def create_examen_route(examen : Create_examen , db : db_dependancy):
+    return create_examen(examen , db)
+
 @router.get("/cours/{id_cours}", response_model=Voir_examens)
-def get_examen(id_cours:int,db:db_dependancy):
-    reponse=db.query(Examen).filter(Examen.id_cours==id_cours).all()
-    return reponse
+def get_examen_route(id_cours:int,db:db_dependancy):
+    return get_examen(id_cours,db)

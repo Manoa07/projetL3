@@ -36,10 +36,8 @@ class LiveView(QWidget):
         self.thread.start()
 
     def stop_camera(self):
-        """Arrête le thread et libère les ressources matérielles"""
-        if hasattr(self, 'thread') and self.thread.isRunning():
-            self.thread.stop() # Demande l'arrêt (doit appeler cap.release() dans VideoThread)
-            self.thread.wait() # Attend la fin réelle du thread pour libérer la LED
-        
-        for cam in self.cams:
-            cam.clear_view()
+        """Arrêt sécurisé du thread"""
+        if hasattr(self, 'thread') and self.thread is not None:
+            if self.thread.isRunning():
+                self.thread.stop()
+            self.thread = None # Libère la référence

@@ -4,12 +4,15 @@ from PyQt6.QtCore import Qt
 from components.cameraView import CameraView
 from views.elevesView import ElevesView
 from views.ajoutEleveView import AjoutEleveView
+# Import du thread de service pour la gestion de la caméra
+from services.presenceTheard import presenceTheard 
 
 class PresenceInterface(QWidget):
     def __init__(self, back_to_home_callback):
         super().__init__()
         self.back_to_home = back_to_home_callback
         self.camera_active = False
+        self.video_thread = None # Stockage de l'instance du thread
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -85,8 +88,7 @@ class PresenceInterface(QWidget):
         self.stack.insertWidget(0, self.cam_placeholder)
 
     def start_presence_camera(self):
-        """Active la caméra et l'insère dans une ScrollArea"""
-        # Création de la ScrollArea pour le scroll
+        """Active la caméra et lance le VideoThread pour le traitement"""
         self.cam_scroll = QScrollArea()
         self.cam_scroll.setWidgetResizable(True)
         self.cam_scroll.setStyleSheet("background: transparent; border: none;")
@@ -94,13 +96,18 @@ class PresenceInterface(QWidget):
         container = QWidget()
         container_layout = QVBoxLayout(container)
         
-        # Titre
         container_layout.addWidget(QLabel("<b style='color:#4facfe; font-size:18px;'>SCAN EN COURS...</b>"))
         
-        # La vue caméra (utilise VideoThread en interne)
-        # Note: Assurez-vous que CameraView gère son propre VideoThread ou passez-lui un callback
+        # La vue caméra
         self.camera_view = CameraView("TERMINAL DE PRÉSENCE", "Scan biométrique actif")
         container_layout.addWidget(self.camera_view)
+        
+        # --- INITIALISATION DU THREAD VIDEO ---
+        self.video_thread = presenceTheard()
+        self.video_thread.change_pixmap_signal.connect(self.camera_view.update_frame)
+        # Connecter le signal de détection pour mettre à jour le label de présence
+        self.video_thread.student_detected_signal.connect(self.update_presence_label)
+        self.video_thread.start()
         
         # Bouton d'arrêt
         self.stop_btn = QPushButton("⏹ ARRÊTER LE SCAN")
@@ -110,22 +117,24 @@ class PresenceInterface(QWidget):
         container_layout.addWidget(self.stop_btn, alignment=Qt.AlignmentFlag.AlignCenter)
         
         container_layout.addStretch()
-        
         self.cam_scroll.setWidget(container)
         
-        # Remplacement dans le stack
         self.stack.removeWidget(self.cam_placeholder)
         self.stack.insertWidget(0, self.cam_scroll)
         self.stack.setCurrentIndex(0)
         self.camera_active = True
 
+    def update_presence_label(self, student_name):
+        """Met à jour l'en-tête de CameraView avec le nom détecté"""
+        if hasattr(self, 'camera_view'):
+            self.camera_view.presence.setText(f"DERNIER: {student_name}")
+
     def stop_presence_camera(self):
-        """Arrête proprement le matériel et revient au bouton de départ"""
-        if self.camera_active:
-            # Si votre CameraView a un thread, il faut l'arrêter ici
-            # Exemple si CameraView possède une méthode stop :
-            if hasattr(self.camera_view, 'stop_camera'):
-                self.camera_view.stop_camera()
+        """Arrête proprement le thread et revient au bouton de départ"""
+        if self.camera_active and self.video_thread:
+            # Arrêt propre du thread OpenCV
+            self.video_thread.stop()
+            self.video_thread = None
             
             self.stack.removeWidget(self.cam_scroll)
             self.cam_scroll.deleteLater()
@@ -136,7 +145,7 @@ class PresenceInterface(QWidget):
             self.stack.setCurrentIndex(0)
 
     def handle_back_home(self):
-        """S'assure que la caméra est coupée si on quitte l'interface"""
+        """Coupe la caméra avant de retourner à l'accueil"""
         self.stop_presence_camera()
         self.back_to_home()
 

@@ -31,3 +31,8 @@ class CameraView(QFrame):
     def update_frame(self, qt_image):
         """Reçoit l'image du Thread et l'affiche"""
         self.video_label.setPixmap(QPixmap.fromImage(qt_image))
+
+    def clear_view(self):
+        """Nettoie l'écran lors de l'arrêt"""
+        self.video_label.clear()
+        self.video_label.setText("FLUX ARRÊTÉ")

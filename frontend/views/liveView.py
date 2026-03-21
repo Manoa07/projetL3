@@ -14,20 +14,32 @@ class LiveView(QWidget):
         self.cam1 = CameraView("SALLE EXAMEN A", "Identification & Posture")
         grid.addWidget(self.cam1, 0, 0)
         
-        # Placeholders pour les autres caméras
-        grid.addWidget(CameraView("SALLE EXAMEN B", "Reconnaissance Faciale"), 0, 1)
-        grid.addWidget(CameraView("COULOIR 1", "Comptage"), 1, 0)
-        grid.addWidget(CameraView("ENTRÉE", "Vérification"), 1, 1)
+        # Conserver les références pour pouvoir les nettoyer
+        self.cams = [self.cam1]
+        
+        # Placeholders
+        c2 = CameraView("SALLE EXAMEN B", "Reconnaissance Faciale")
+        c3 = CameraView("COULOIR 1", "Comptage")
+        c4 = CameraView("ENTRÉE", "Vérification")
+        
+        grid.addWidget(c2, 0, 1)
+        grid.addWidget(c3, 1, 0)
+        grid.addWidget(c4, 1, 1)
+        self.cams.extend([c2, c3, c4])
         
         layout.addLayout(grid)
 
-        # Initialisation du Thread avec l'index 0 (Webcam)
+        # Initialisation du Thread
         self.thread = VideoThread(0) 
         self.thread.change_pixmap_signal.connect(self.cam1.update_frame)
         self.thread.alert_signal.connect(self.alert_callback)
         self.thread.start()
 
     def stop_camera(self):
-        """Appelée lors de la fermeture pour éviter les crashs"""
+        """Arrête le thread et libère les ressources matérielles"""
         if hasattr(self, 'thread') and self.thread.isRunning():
-            self.thread.stop()
+            self.thread.stop() # Demande l'arrêt (doit appeler cap.release() dans VideoThread)
+            self.thread.wait() # Attend la fin réelle du thread pour libérer la LED
+        
+        for cam in self.cams:
+            cam.clear_view()

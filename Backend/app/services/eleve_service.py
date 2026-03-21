@@ -1,3 +1,4 @@
+import pickle
 import shutil
 from sqlite3 import IntegrityError
 from uuid import uuid4
@@ -7,7 +8,7 @@ import os
 from sqlalchemy import and_
 UPLOAD_DIR="upload/eleve_upload"
 
-def create_eleve(eleve,photo,db):
+def create_eleve(eleve,photo,embedding,db):
     eleve_verifie=db.query(Eleve).filter(
         and_(
             Eleve.Nom_eleve==eleve.Nom_eleve,
@@ -21,13 +22,19 @@ def create_eleve(eleve,photo,db):
     with open(file_path,"wb") as upload:
         shutil.copyfileobj(photo.file, upload)
 
+    embedding_blob=None
+
+    if embedding is not None:
+        embedding_blob=pickle.dumps(embedding)
+        
     if not eleve_verifie:
         new_eleve = Eleve(
             Nom_eleve = eleve.Nom_eleve,
             Prenom_eleve= eleve.Prenom_eleve,
             Classe_eleve= eleve.Classe_eleve,
             Numero_eleve= eleve.Numero_eleve,
-            photo_eleve=file_path
+            photo_eleve=file_path,
+            embedding=embedding_blob
             )
         try:
             db.add(new_eleve)
@@ -35,7 +42,12 @@ def create_eleve(eleve,photo,db):
             db.refresh(new_eleve)
         except IntegrityError as e:
             print(e)
-        return new_eleve
+        return {
+            "Numero_eleve": new_eleve.Numero_eleve,
+            "Nom_eleve": new_eleve.Nom_eleve,
+            "Prenom_eleve": new_eleve.Prenom_eleve,
+            "Classe_eleve": new_eleve.Classe_eleve
+        }
     else:
         raise HTTPException(
             status_code=409,

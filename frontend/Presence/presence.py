@@ -1,107 +1,50 @@
+import json
 import cv2
 import numpy as np
 from mtcnn import MTCNN
 from datetime import datetime, timedelta
 import pickle
 from keras_facenet import FaceNet
-import sqlite3
+import requests
 
 class SystemePresence:
     """
     Système de présence par reconnaissance faciale avec base SQLite.
     """
 
-    def __init__(self, seuil_distance=0.8, db_path='presence.db'):
-        """
-        Initialise les modèles et la connexion à la base.
+    def __init__(self, seuil_distance=0.8):
 
-        Args:
-            seuil_distance (float): Seuil de distance pour considérer une correspondance.
-            db_path (str): Chemin vers le fichier SQLite.
-        """
-        self.seuil = seuil_distance
-        self.db_path = db_path
-
-        # Connexion à la base
-        self.conn = self.connect_db()
-        self.creer_tables()
-
+        self.seuil =seuil_distance
         # Détecteur de visages MTCNN
         self.detector = MTCNN()
-
         # Modèle d'embedding
         print("Chargement du modèle FaceNet (keras-facenet)...")
         self.embedder = FaceNet()
         print("Modèle chargé avec succès.")
-
         # Charger la base des embeddings (cache)
-        self.base_visages = self.charger_base()
-
+        def actualiser_base(self):
+            self.base_visages = self.charger_base()
+        actualiser_base(self)
         # Dictionnaire pour éviter les enregistrements trop fréquents (2h30)
         self.dernier_enregistrement = {}  # {nom_complet: datetime}
 
-    def connect_db(self):
-        """Établit la connexion SQLite."""
-        try:
-            conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            conn.row_factory = sqlite3.Row
-            print("Connexion à SQLite établie.")
-            return conn
-        except Exception as e:
-            print(f"Erreur de connexion : {e}")
-            return None
-
-    def creer_tables(self):
-        """Crée les tables si elles n'existent pas."""
-        if not self.conn:
-            return
-        cur = self.conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS eleves (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nom VARCHAR(100) NOT NULL,
-                prenom VARCHAR(100) NOT NULL,
-                embedding BLOB NOT NULL,
-                date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS presences (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_eleve INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
-                date_presence DATE NOT NULL,
-                heure_presence TIME NOT NULL,
-                UNIQUE(id_eleve, date_presence)
-            )
-        """)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS absences (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                id_eleve INTEGER REFERENCES eleves(id) ON DELETE CASCADE,
-                date_absence DATE NOT NULL,
-                justifie BOOLEAN DEFAULT FALSE,
-                UNIQUE(id_eleve, date_absence)
-            )
-        """)
-        self.conn.commit()
-        cur.close()
-        print("Tables vérifiées/créées.")
 
     def charger_base(self):
         """Charge les embeddings depuis la base pour la comparaison rapide."""
-        if not self.conn:
-            return {}
-        cur = self.conn.cursor()
-        cur.execute("SELECT id, nom, prenom, embedding FROM eleves")
-        rows = cur.fetchall()
-        cur.close()
-        base = {}
-        for row in rows:
-            emb_blob = row[3]
-            emb = pickle.loads(emb_blob)
-            nom_complet = f"{row[1]} {row[2]}"
-            base[nom_complet] = (row[0], emb)
-        return base
+        try:
+            reponse=requests.get("http://localhost:8000/eleve/all")
+            eleves=reponse.json()
+            base={}
+            for eleve in eleves:
+                nom_complet = f"{eleve['Nom_eleve']} {eleve['Prenom_eleve']} "
+                embedding=np.array(eleve["embedding"])
+                base[nom_complet]=(eleve["Numero_eleve"],embedding)
+            return base
+        except Exception as e:
+            print(e)
+            return{}
+
+        
 
     def obtenir_embedding(self, image_visage):
         """Calcule l'embedding d'un visage."""
@@ -134,27 +77,28 @@ class SystemePresence:
             return None, None, None
 
     def enregistrer_presence_db(self, id_eleve, nom_complet):
-        """
-        Enregistre la présence dans la table presences.
-        Vérifie d'abord si l'élève n'a pas déjà une présence aujourd'hui (unicité).
-        """
+
         maintenant = datetime.now()
         date_auj = maintenant.date().isoformat()
         heure_act = maintenant.time().isoformat()
 
-        cur = self.conn.cursor()
+        data={
+            "id_eleve":id_eleve,
+            "date_presence":maintenant.date().isoformat(),
+            "heure_presence":maintenant.time().isoformat(),
+            "status":"present"
+        }
         try:
-            cur.execute("""
-                INSERT INTO presences (id_eleve, date_presence, heure_presence)
-                VALUES (?, ?, ?)
-            """, (id_eleve, date_auj, heure_act))
-            self.conn.commit()
-            print(f"Présence enregistrée pour {nom_complet} à {heure_act}")
-        except sqlite3.IntegrityError:
-            self.conn.rollback()
-            print(f"{nom_complet} a déjà une présence aujourd'hui.")
-        finally:
-            cur.close()
+            reponse=requests.post(
+                "http://localhost:8000/presence/create",
+                json=data
+            )
+            if reponse.status_code==200:
+                print(f"Presence enregistrée pour {nom_complet}")
+            else:
+                print("Erreur API : ",reponse.text)
+        except Exception as e:
+            print(e)
 
     def run(self, source=0):
         """
@@ -227,36 +171,35 @@ class SystemePresence:
         cap.release()
         cv2.destroyAllWindows()
 
-    def ajouter_eleve(self, nom, prenom, images_visages):
-        """
-        Ajoute un nouvel élève dans la base.
-        - Calcule l'embedding moyen à partir des images fournies.
-        - Stocke dans la table eleves.
-        - Met à jour le cache local.
-        """
+    def ajouter_eleve(self, nom, prenom, classe ,numero,images_visages):
+ 
         embeddings = []
         for img in images_visages:
             emb = self.obtenir_embedding(img)
             embeddings.append(emb)
-        emb_moyen = np.mean(embeddings, axis=0)
-        emb_blob = pickle.dumps(emb_moyen)
 
-        cur = self.conn.cursor()
+        emb_moyen = np.mean(embeddings, axis=0)
+
+        _,buffer=cv2.imencode(".jpg",images_visage[0])
+        files={
+            "photo":("photo.jpg",buffer.tobytes(),"image/jpeg")
+        }
+        data = {
+            "Nom_eleve": nom,
+            "Prenom_eleve": prenom,
+            "Classe_eleve": classe,
+            "Numero_eleve": numero,
+            "embedding":emb_moyen.tolist()
+        }
         try:
-            cur.execute("""
-                INSERT INTO eleves (nom, prenom, embedding)
-                VALUES (?, ?, ?)
-            """, (nom, prenom, emb_blob))
-            self.conn.commit()
-            new_id = cur.lastrowid
-            print(f"Élève '{nom} {prenom}' ajouté avec l'id {new_id}.")
-            nom_complet = f"{nom} {prenom}"
-            self.base_visages[nom_complet] = (new_id, emb_moyen)
+            response = requests.post(
+            "http://localhost:8000/eleve/create",
+            data=data,
+            files=files
+            )
+            print(response.json())
         except Exception as e:
-            self.conn.rollback()
             print(f"Erreur lors de l'ajout : {e}")
-        finally:
-            cur.close()
 
 
 def capturer_images_visage(detector, nb_images=10):
@@ -292,8 +235,7 @@ def capturer_images_visage(detector, nb_images=10):
 
 
 if __name__ == "__main__":
-    db_path = 'presence.db'
-    systeme = SystemePresence(seuil_distance=0.8, db_path=db_path)
+    systeme = SystemePresence(seuil_distance=0.8)
 
     print("\n=== SYSTÈME DE PRÉSENCE ===")
     print("1. Ajouter un élève")
@@ -303,10 +245,12 @@ if __name__ == "__main__":
     if choix == "1":
         nom = input("Nom de l'élève : ")
         prenom = input("Prénom de l'élève : ")
+        classe=input("Classe de l'élève : ")
         print("Préparez-vous à être photographié.")
-        images = capturer_images_visage(systeme.detector, nb_images=10)
-        if len(images) >= 3:
-            systeme.ajouter_eleve(nom, prenom, images)
+        numero=input("Numero d l'eleve")
+        images_visage = capturer_images_visage(systeme.detector, nb_images=10)
+        if len(images_visage) >= 3:
+            systeme.ajouter_eleve(nom,prenom,classe,numero,images_visage)
         else:
             print("Pas assez d'images valides.")
     elif choix == "2":

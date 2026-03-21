@@ -11,10 +11,11 @@ router= APIRouter(prefix="/eleve",tags=["Eleves"])
 def create_eleve_route(
     db: db_dependancy,
     eleve : Create_eleve =Depends(Create_eleve.as_form),
-    photo :UploadFile =File(...)
+    photo :UploadFile =File(...),
+    embedding : List[str] = Form(...)
     
     ):
-    return create_eleve(eleve,photo,db)
+    return create_eleve(eleve,photo,embedding,db)
 
 
 @router.get("/all",response_model=List[Reponse_eleve])

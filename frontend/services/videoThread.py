@@ -16,56 +16,67 @@ class VideoThread(QThread):
     def __init__(self, camera_index=0):
         super().__init__()
         self.camera_index = camera_index
-        self._run_flag = True  # Contrôle de la boucle
+        self._run_flag = True  
+        self.cap = None  # Initialisation de l'attribut pour éviter l'AttributeError
 
     def run(self):
-        # Initialisation du landmarker une seule fois au début du thread
+        # Initialisation du landmarker
         landmarker = PoseLandmarker.create_from_options(options)
-        cap = cv2.VideoCapture(self.camera_index)
+        
+        # Assignation à self.cap pour qu'il soit accessible par stop()
+        self.cap = cv2.VideoCapture(self.camera_index)
 
-        while self._run_flag:
-            ret, frame = cap.read()
-            if not ret:
-                break
+        try:
+            while self._run_flag:
+                ret, frame = self.cap.read()
+                if not ret:
+                    break
 
-            # 1. Préparation de l'image pour MediaPipe
-            timestamp = int(time.time() * 1000)
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-            
-            # 2. Appel de la détection
-            result = landmarker.detect_for_video(mp_image, timestamp)
+                # 1. Préparation de l'image pour MediaPipe
+                timestamp = int(time.time() * 1000)
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+                
+                # 2. Appel de la détection
+                result = landmarker.detect_for_video(mp_image, timestamp)
 
-            # 3. Traitement des résultats
-            if result.pose_landmarks:
-                suspicious_movements = []
+                # 3. Traitement des résultats
+                if result.pose_landmarks:
+                    suspicious_movements = []
 
-                for landmarks in result.pose_landmarks:
-                    h, w, _ = frame.shape
-                    points = [[lm.x * w, lm.y * h] for lm in landmarks]
-                    
-                    if landmarks[0].visibility > define_precision_tolerance:
-                        movements = detect_suspicious_movements(points)
-                        if movements:
-                            suspicious_movements.extend(movements)
+                    for landmarks in result.pose_landmarks:
+                        h, w, _ = frame.shape
+                        points = [[lm.x * w, lm.y * h] for lm in landmarks]
+                        
+                        if landmarks[0].visibility > define_precision_tolerance:
+                            movements = detect_suspicious_movements(points)
+                            if movements:
+                                suspicious_movements.extend(movements)
 
-                # 4. Envoi des alertes
-                for msg in suspicious_movements:
-                    self.alert_signal.emit(msg, time.strftime("%H:%M"))
-                    cv2.putText(frame, f"ALERTE: {msg}", (10, 30), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    # 4. Envoi des alertes
+                    for msg in suspicious_movements:
+                        self.alert_signal.emit(msg, time.strftime("%H:%M"))
+                        cv2.putText(frame, f"ALERTE: {msg}", (10, 30), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-            # 5. Conversion pour l'affichage PyQt
-            h, w, ch = rgb_frame.shape
-            bytes_per_line = ch * w
-            qt_img = QImage(rgb_frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-            self.change_pixmap_signal.emit(qt_img)
-
-        cap.release()
+                # 5. Conversion pour l'affichage PyQt
+                h, w, ch = rgb_frame.shape
+                bytes_per_line = ch * w
+                qt_img = QImage(rgb_frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+                self.change_pixmap_signal.emit(qt_img)
+        
+        finally:
+            # Garantie que la caméra est libérée à la fin du thread
+            if self.cap is not None:
+                self.cap.release()
 
     def stop(self):
-        """Libère physiquement la caméra et arrête le thread"""
+        """Arrête la boucle et libère les ressources proprement"""
         self._run_flag = False
-        if self.cap and self.cap.isOpened():
-            self.cap.release() # FORCE l'extinction de la LED immédiatement
-        self.wait() # Attend la fin propre du thread
+        
+        # Vérification sécurisée de l'existence de cap
+        if self.cap is not None and self.cap.isOpened():
+            self.cap.release()
+            
+        self.quit()  # Demande au thread de s'arrêter
+        self.wait()  # Attend la fin réelle du thread pour éviter les crashs

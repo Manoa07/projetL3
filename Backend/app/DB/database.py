@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm import declarative_base
 
-DATABASE_URL = "postgresql://postgres:YannickDB@localhost:5432/Surveillance_DB"
+DATABASE_URL = "postgresql://postgres:MLkj1542....@localhost:5432/Surveillance_DB"
 
 engine= create_engine(DATABASE_URL)
 SessionLocal=sessionmaker(autocommit=False,autoflush=False,bind=engine)

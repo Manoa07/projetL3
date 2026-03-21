@@ -3,28 +3,34 @@ import cv2
 import numpy as np
 from mtcnn import MTCNN
 from datetime import datetime, timedelta
-import pickle
-from keras_facenet import FaceNet
+import pickle 
+from  keras_facenet import FaceNet
+import sqlite3
 import requests
-
 class SystemePresence:
     """
     Système de présence par reconnaissance faciale avec base SQLite.
     """
+    def __init__(self, seuil_distance=0.8, db_path='presence.db'):
+        """
+        Initialise les modèles et la connexion à la base.
 
-    def __init__(self, seuil_distance=0.8):
-
-        self.seuil =seuil_distance
-        # Détecteur de visages MTCNN
+        Args:
+            seuil_distance (float): Seuil de distance pour considérer une correspondance.
+            db_path (str): Chemin vers le fichier SQLite.
+        """
+        self.seuil = seuil_distance
+        self.db_path = db_path
+        # Connexion à la base
+        self.conn = self.connect_db()
+        self.creer_tables()
         self.detector = MTCNN()
         # Modèle d'embedding
         print("Chargement du modèle FaceNet (keras-facenet)...")
         self.embedder = FaceNet()
         print("Modèle chargé avec succès.")
         # Charger la base des embeddings (cache)
-        def actualiser_base(self):
-            self.base_visages = self.charger_base()
-        actualiser_base(self)
+        self.base_visages = self.charger_base()
         # Dictionnaire pour éviter les enregistrements trop fréquents (2h30)
         self.dernier_enregistrement = {}  # {nom_complet: datetime}
 

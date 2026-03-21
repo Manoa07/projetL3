@@ -61,13 +61,23 @@ def get_eleve(db):
             status_code=404,
             detail="Aucun eleve trouvé"
         )
+    for e in eleve_verifie:
+        if e.embedding:
+            e.embedding = pickle.loads(e.embedding)
     return eleve_verifie
 
-def get_eleve_id(eleve_num, db):
-    eleve_verifie= db.query(Eleve).filter(Eleve.Numero_eleve == eleve_num).first()
+
+
+def get_eleve_id(eleve_num,eleve_class, db):
+    eleve_verifie= db.query(Eleve).filter(
+        and_(
+            Eleve.Numero_eleve == eleve_num,
+            Eleve.Classe_eleve == eleve_class
+            )
+        ).first()
     if not eleve_verifie:
         raise HTTPException(
             status_code=404,
-            detail="Eleve instrouvable"
+            detail="Eleve introuvable"
         )
     return eleve_verifie

@@ -12,7 +12,7 @@ def create_eleve_route(
     db: db_dependancy,
     eleve : Create_eleve =Depends(Create_eleve.as_form),
     photo :UploadFile =File(...),
-    embedding : List[str] = Form(...)
+    embedding : List[str] = Form(None)
     
     ):
     return create_eleve(eleve,photo,embedding,db)
@@ -23,6 +23,6 @@ def get_eleves_route(db:db_dependancy):
     return get_eleve(db)
 
 
-@router.get("/numero/{eleve_numero}",response_model=Id_eleve)
-def get_eleve_id_route(eleve_numero: int, db:db_dependancy):
-    return get_eleve_id(eleve_numero,db)
+@router.get("/numero/{eleve_numero}/class/{eleve_class}",response_model=Id_eleve)
+def get_eleve_id_route(eleve_numero: int,eleve_class:str, db:db_dependancy):
+    return get_eleve_id(eleve_numero,eleve_class,db)

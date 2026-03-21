@@ -246,8 +246,8 @@ if __name__ == "__main__":
         nom = input("Nom de l'élève : ")
         prenom = input("Prénom de l'élève : ")
         classe=input("Classe de l'élève : ")
-        print("Préparez-vous à être photographié.")
         numero=input("Numero d l'eleve")
+        print("Préparez-vous à être photographié.")
         images_visage = capturer_images_visage(systeme.detector, nb_images=10)
         if len(images_visage) >= 3:
             systeme.ajouter_eleve(nom,prenom,classe,numero,images_visage)

@@ -7,15 +7,19 @@ import pickle
 from  keras_facenet import FaceNet
 from services.presence_service import create_presence
 from services.eleve_service import get_eleve
+from models.presence import Presence
+
 class SystemePresence:
 
-    def __init__(self , db, seuil_distance=0.8):
+    def __init__(self ,id_cours, db, seuil_distance=0.8):
         self.db=db
+        self.id_cours=id_cours
         self.seuil = seuil_distance
         self.detector = MTCNN()
         self.base_visages = self.charger_base()
         self.dernier_enregistrement = {} 
         self.embedder = FaceNet()
+        
         
 
 
@@ -23,9 +27,9 @@ class SystemePresence:
         eleves=get_eleve(self.db)
         base={}
         for eleve in eleves:
-            nom_complet = f"{eleve.Nom_eleve} {eleve.Prenom_eleve} "
+            nom_complet = f"{eleve.Nom_eleve} {eleve.Prenom_eleve}"
             embedding=np.array(eleve.embedding)
-            base[nom_complet]=(eleve.Id_eleve,eleve.Classe_eleve,embedding)
+            base[nom_complet]=(eleve.Id_eleve,eleve.Classe_eleve,self.id_cours,embedding)
         return base
 
     def obtenir_embedding(self, image_visage):
@@ -33,41 +37,49 @@ class SystemePresence:
 
     def comparer_visage(self, embedding):
         if not self.base_visages:
-            return None, None, None ,None
+            return None, None, None ,None,None
 
         min_dist = float('inf')
         Nom_complet = None
+        id_c=None
         id_e = None
         C_e=None
 
-        for nom_complet, (id_e , C_e, emb_ref) in self.base_visages.items():
+        for nom_complet, (id_e , C_e,id_c, emb_ref) in self.base_visages.items():
+            if isinstance(emb_ref,str):
+                emb_ref=np.array(json.loads(emb_ref),dtype=np.float32)
+            emb_ref=np.array(emb_ref,dtype=np.float32)
             dist = np.linalg.norm(embedding - emb_ref)
             if dist < min_dist:
                 min_dist = dist
                 Nom_complet = nom_complet
+                Id_cours=id_c
                 Id_eleve = id_e
                 Classe_eleve=C_e
+            return min_dist,Nom_complet ,Id_eleve,Id_cours, Classe_eleve
 
         if min_dist < self.seuil:
-            return Nom_complet, min_dist, Id_eleve ,Classe_eleve
+            return Nom_complet, min_dist, id_e ,id_c,C_e
         else:
-            return None, None, None ,None
+            return None, None, None ,None,None
 
-    def enregistrer_presence_db(self, id_eleve,id_cours):
+    def enregistrer_presence_db(self, Id_eleve,Id_cours,Classe_eleve):
 
         maintenant = datetime.now()
         date_auj = maintenant.date().isoformat()
         heure_act = maintenant.time().isoformat()
 
-        data={
-            "id_eleve":id_eleve,
-            "id_cours":id_cours,
-            "date_presence":date_auj,
-            "heure_presence":heure_act,
-            "status":"present"
-        }
+        data=Presence(
+            id_eleve=Id_eleve,
+            id_cours=Id_cours,
+            Date_presence=date_auj,
+            Heure_presence=heure_act,
+            Status_presence="present"
+        )
+
+        
         try:
-            reponse=create_presence(data)
+            reponse=create_presence(data,self.db)
             if reponse:
                 print("presence enregistrer")
         except Exception as e:
@@ -93,7 +105,7 @@ class SystemePresence:
                     continue
 
                 embedding = self.obtenir_embedding(face)
-                nom_complet, mindist, id_eleve,classe_eleve = self.comparer_visage(embedding)
+                nom_complet, mindist, id_eleve,id_cours,classe_eleve = self.comparer_visage(embedding)
     
                 if nom_complet:
                     maintenant = datetime.now()
@@ -104,20 +116,22 @@ class SystemePresence:
                             
                         else:
                             # Intervalle dépassé, on enregistre
-                            self.enregistrer_presence_db(id_eleve, classe_eleve)
+                            self.enregistrer_presence_db(id_eleve,id_cours, classe_eleve)
                             self.dernier_enregistrement[nom_complet] = maintenant
                             resultat.append({
                                 "nom" : nom_complet,
                                 "id_eleve" : id_eleve,
+                                "id_cours":id_cours,
                                 "status" : "present"
                             })
                     else:
                         # Première détection
-                        self.enregistrer_presence_db(id_eleve,classe_eleve)
+                        self.enregistrer_presence_db(id_eleve,id_cours,classe_eleve)
                         self.dernier_enregistrement[nom_complet] = maintenant
                         resultat.append({
                             "nom" : nom_complet,
                             "id_eleve" : id_eleve,
+                            "id_cours" : id_cours,
                             "status" : "present"
                         })
                 else:

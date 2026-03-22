@@ -4,6 +4,7 @@ from fastapi import File, UploadFile
 from pydantic import BaseModel
 from fastapi import Form
 import json
+from schema.sch_presence import Reponse_presence
 
 class Create_eleve(BaseModel):
     Nom_eleve: str 
@@ -40,6 +41,7 @@ class Reponse_eleve(BaseModel):
     Classe_eleve:str
     Numero_eleve:int
     embedding:Optional[List[float]]=None
+    presence:List[Reponse_presence]
     
     class Config:
         from_attributes=True

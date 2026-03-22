@@ -12,6 +12,8 @@ class Create_presence(BaseModel):
         from_attribute = True
 
 class Reponse_presence(BaseModel):
+    id_eleve:int
+    id_cours:int
     Status_presence: str
     Heure_presence: datetime.time
     Date_presence : datetime.date

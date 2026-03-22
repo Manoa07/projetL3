@@ -3,52 +3,63 @@ import cv2
 import numpy as np
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
-#from Presence.presence import SystemePresence # Import de votre classe existante
+import requests
+import time
+
+
 
 class presenceTheard(QThread):
-    # Signal pour envoyer l'image à l'interface
     change_pixmap_signal = pyqtSignal(QImage)
+    student_detected_signal=pyqtSignal(str)
     
-    def __init__(self):
+    def __init__(self, id_cours):
         super().__init__()
+        self.id_cours=id_cours
         self._run_flag = True
-   #     self.systeme = SystemePresence(seuil_distance=0.6) # Initialisation du modèle
 
     def run(self):
         cap = cv2.VideoCapture(0)
         while self._run_flag:
             ret, frame = cap.read()
-            if ret:
-                # 1. Logique de reconnaissance (reprise de votre code presence.py)
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                detections = self.systeme.detector.detect_faces(rgb_frame)
+            
+            if not ret:
+                continue     
+            print("frame ok")       
+            _,buffer = cv2.imencode('.jpg',frame)
+            try:
+                reponse=requests.post(
+                    "http://127.0.0.1:8000/presence/detecter",
+                    files={"file":("frame.jpg",buffer.tobytes(),"image/jpeg")},
+                    data={"id_cours" : self.id_cours}
+                )
+                data=reponse.json()
 
-                for det in detections:
-                    x, y, w, h = det['box']
-                    face = rgb_frame[max(0, y):y+h, max(0, x):x+w]
-                    
-                    if face.size > 0:
-                        embedding = self.systeme.obtenir_embedding(face)
-                        nom, dist, id_eleve = self.systeme.comparer_visage(embedding)
+                for face in data.get("resultats", []):
+                    x = face.get("x", 0)
+                    y = face.get("y", 0)
+                    w = face.get("w", 0)
+                    h = face.get("h", 0)
+                    nom = face.get("nom", "Inconnu")
 
-                        if nom:
-                            # Logique d'enregistrement simplifiée pour l'exemple
-                            self.systeme.enregistrer_presence_db(id_eleve, nom)
-                            color = (0, 255, 0) # Vert
-                            label = f"{nom}"
-                        else:
-                            color = (255, 0, 0) # Rouge
-                            label = "Inconnu"
-                        
-                        cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-                        cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                    if nom != "Inconnu":
+                        color = (0, 255, 0)
+                    else:
+                        color = (0, 0, 255)
 
-                # 2. Conversion pour PyQt6
-                height, width, channel = frame.shape
-                bytes_per_line = 3 * width
-                qt_img = QImage(frame.data, width, height, bytes_per_line, QImage.Format.Format_RGB888).rgbSwapped()
-                self.change_pixmap_signal.emit(qt_img)
-        
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+                    cv2.putText(frame, nom, (x, y-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+            except Exception as e:
+                print("Erreur API ",e)
+            try:
+                rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb_image.shape
+                bytes_per_line = ch * w
+                qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+                self.change_pixmap_signal.emit(qt_image)
+            except Exception as e:
+                print(e)
+            time.sleep(0.06)
         cap.release()
 
     def stop(self):

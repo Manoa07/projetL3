@@ -7,7 +7,6 @@ class Cours(Base):
     Id_cours=Column(Integer,primary_key=True,autoincrement=True, index=True)
     Nom_cours=Column(String)
     Professeur_cours=Column(String)
-    Date_cours=Column(DateTime)
     Salle_cours=Column(String)
     presence =relationship("Presence",back_populates="cours")
     examen=relationship("Examen",back_populates="cours")

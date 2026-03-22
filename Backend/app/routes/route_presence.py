@@ -1,6 +1,6 @@
 from typing import List
 import cv2
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, Form, UploadFile
 import numpy as np
 from DB.database import db_dependancy
 from schema.sch_presence import Create_presence,Presence_eleve
@@ -22,8 +22,8 @@ def get_presence_route(eleve_id :int,db:db_dependancy):
     return get_presence(eleve_id,db)
 
 @router.post("/detecter")
-async def detect(background_tasks: BackgroundTasks ,db: db_dependancy,file: UploadFile = File(...)):
-    systeme=SystemePresence(db,seuil_distance=0.8)
+async def detect(background_tasks: BackgroundTasks,db: db_dependancy,id_cours:int=Form(...) ,file: UploadFile = File(...)):
+    systeme=SystemePresence(id_cours,db,seuil_distance=0.8)
     contents = await file.read()
     frame = cv2.imdecode(np.frombuffer(contents, np.uint8), cv2.IMREAD_COLOR)
 

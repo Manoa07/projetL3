@@ -2,30 +2,56 @@ import pickle
 import shutil
 from sqlite3 import IntegrityError
 from uuid import uuid4
+import cv2
 from fastapi import HTTPException
+import numpy as np
 from models.eleve import Eleve
 import os
 from sqlalchemy import and_
+from mtcnn import MTCNN
+from keras_facenet import FaceNet
+detector=MTCNN()
+embedder=FaceNet()
 UPLOAD_DIR="upload/eleve_upload"
 
-def create_eleve(eleve,photo,embedding,db):
+def create_eleve(eleve,photo,images,db):
+    print("FILES REÇUS :", images)
     eleve_verifie=db.query(Eleve).filter(
         and_(
             Eleve.Nom_eleve==eleve.Nom_eleve,
             Eleve.Prenom_eleve== eleve.Prenom_eleve
         )
     ).first()
+    #transformer les images en embedding:
+    embedding=[]
+    for image in images:
+        image.file.seek(0)
+        contenue= image.file.read()
+        tableau=np.frombuffer(contenue,np.uint8)
+        img=cv2.imdecode(tableau,cv2.IMREAD_COLOR)
+        if img is None:
+            continue
+        face=detect_face(img)
+        if face is None:
+            continue
+        if not isinstance(face,np.ndarray):
+            continue
+        if face.size==0:
+            continue
+        if face.shape[0]<20 or face.shape[1]<20:
+            continue
+        emb=embedder.embeddings([face])[0]
+        embedding.append(emb)
+    if len(embedding)==0:
+        raise Exception("Aucun visage trouvé dans l'image ")
+    finale_embedding = np.mean(embedding, axis=0)
+    
     Filename=f"{uuid4()}_{photo.filename}"
-
     file_path=os.path.join(UPLOAD_DIR,Filename)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     with open(file_path,"wb") as upload:
         shutil.copyfileobj(photo.file, upload)
 
-    embedding_blob=None
-
-    if embedding is not None:
-        embedding_blob=pickle.dumps(embedding)
         
     if not eleve_verifie:
         new_eleve = Eleve(
@@ -34,7 +60,7 @@ def create_eleve(eleve,photo,embedding,db):
             Classe_eleve= eleve.Classe_eleve,
             Numero_eleve= eleve.Numero_eleve,
             photo_eleve=file_path,
-            embedding=embedding_blob
+            embedding=pickle.dumps(finale_embedding)
             )
         try:
             db.add(new_eleve)
@@ -53,7 +79,24 @@ def create_eleve(eleve,photo,embedding,db):
             status_code=409,
             detail="eleve deja existant"
         )
-
+def detect_face(img):
+    if img.dtype != np.uint8:
+        img = img.astype(np.uint8)
+    if len(img.shape) != 3 or img.shape[2] != 3:
+        return None
+    resultat=detector.detect_faces(img)
+    if not resultat:
+        return None
+    x, y, w, h = resultat[0]['box']
+    x, y = max(0, x), max(0, y)
+    face = img[y:y+h, x:x+w]
+    if face.size == 0:
+        return None
+    face = cv2.resize(face, (160, 160))
+    print("TYPE FACE:", type(face))
+    print("IMG:", type(img), img.shape if img is not None else None)
+    print("FACE:", type(face), face.shape if isinstance(face, np.ndarray) else None)
+    return face 
 def get_eleve(db):
     eleve_verifie=db.query(Eleve).all()
     if not eleve_verifie:

@@ -1,16 +1,20 @@
 from sqlite3 import IntegrityError
 from fastapi import HTTPException
+from sqlalchemy import and_
 from models.cours import Cours
 
 
 def create_cours(cours,db):
-    cours_verifie=db.query(Cours).filter(Cours.Nom_cours==cours.Nom_cours and Cours.Professeur_cours==cours.Prof_cours and Cours.Date_cours== cours.Date_cours ).first()
+    cours_verifie=db.query(Cours).filter(
+        and_(Cours.Nom_cours==cours.Nom_cours,
+             Cours.Professeur_cours==cours.Prof_cours
+             )
+        ).first()
     if not cours_verifie:
         new_cours = Cours(
             Nom_cours = cours.Nom_cours,
             Professeur_cours= cours.Prof_cours,
-           Date_cours=cours.Date_cours,
-           Salle_cours=cours.Salle_cours
+            Salle_cours=cours.Salle_cours
            )
         try:
             db.add(new_cours)

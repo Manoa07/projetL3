@@ -1,12 +1,13 @@
 from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton, 
                              QFrame, QLabel, QStackedWidget, QScrollArea)
 from PyQt6.QtCore import Qt
+import requests
 from components.cameraView import CameraView
 from views.elevesView import ElevesView
 from views.ajoutEleveView import AjoutEleveView
 # Import du thread de service pour la gestion de la caméra
 from services.presenceTheard import presenceTheard 
-
+from PyQt6.QtWidgets import QComboBox
 class PresenceInterface(QWidget):
     def __init__(self, back_to_home_callback):
         super().__init__()
@@ -62,7 +63,23 @@ class PresenceInterface(QWidget):
         self.stack.addWidget(AjoutEleveView()) # Index 2
 
         layout.addWidget(self.stack, stretch=5)
+    def load_cours(self):
+        try:
+            response = requests.get("http://127.0.0.1:8000/cours/all")
+            cours_list = response.json()
 
+            self.cours_select.clear()
+
+            for cours in cours_list:
+                # affichage = nom du cours
+                # data = id du cours
+                self.cours_select.addItem(
+                    f"{cours['Nom_cours']} - {cours['Salle_cours']}",
+                    cours["Id_cours"]
+                )
+
+        except Exception as e:
+            print("Erreur chargement cours :", e)
     def setup_placeholder_page(self):
         """Crée l'interface d'attente avec le bouton de démarrage"""
         self.cam_placeholder = QWidget()
@@ -86,8 +103,18 @@ class PresenceInterface(QWidget):
         placeholder_layout.addStretch()
         
         self.stack.insertWidget(0, self.cam_placeholder)
+        self.cours_select = QComboBox()
+        self.cours_select.setFixedWidth(300)
+        placeholder_layout.addWidget(self.cours_select, alignment=Qt.AlignmentFlag.AlignCenter)
+        # Charger les cours
+        self.load_cours()
 
     def start_presence_camera(self):
+        #selection cours
+        self.selected_cours_id = self.cours_select.currentData()
+        if not self.selected_cours_id:
+            print("Aucun cours sélectionné")
+            return
         """Active la caméra et lance le VideoThread pour le traitement"""
         self.cam_scroll = QScrollArea()
         self.cam_scroll.setWidgetResizable(True)
@@ -97,18 +124,21 @@ class PresenceInterface(QWidget):
         container_layout = QVBoxLayout(container)
         
         container_layout.addWidget(QLabel("<b style='color:#4facfe; font-size:18px;'>SCAN EN COURS...</b>"))
-        
+
+
         # La vue caméra
         self.camera_view = CameraView("TERMINAL DE PRÉSENCE", "Scan biométrique actif")
         container_layout.addWidget(self.camera_view)
         
         # --- INITIALISATION DU THREAD VIDEO ---
-        #self.video_thread = presenceTheard()
-        #self.video_thread.change_pixmap_signal.connect(self.camera_view.update_frame)
-        # Connecter le signal de détection pour mettre à jour le label de présence
-        #self.video_thread.student_detected_signal.connect(self.update_presence_label)
-        #self.video_thread.start()
-        
+        self.video_thread = presenceTheard(self.selected_cours_id)
+        self.video_thread.change_pixmap_signal.connect(
+            self.camera_view.update_frame
+        )
+        self.video_thread.student_detected_signal.connect(
+            self.update_presence_label
+        )
+        self.video_thread.start()        
         # Bouton d'arrêt
         self.stop_btn = QPushButton("⏹ ARRÊTER LE SCAN")
         self.stop_btn.setFixedSize(200, 45)

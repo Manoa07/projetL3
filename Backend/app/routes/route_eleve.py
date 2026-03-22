@@ -7,7 +7,7 @@ from schema.sch_eleve import Create_eleve , Reponse_eleve ,Id_eleve
 from services.eleve_service import create_eleve,get_eleve,get_eleve_id
 router= APIRouter(prefix="/eleve",tags=["Eleves"])
 
-@router.post("/create")
+@router.post("/create",response_class=Create_eleve)
 def create_eleve_route(
     db: db_dependancy,
     eleve : Create_eleve =Depends(Create_eleve.as_form),

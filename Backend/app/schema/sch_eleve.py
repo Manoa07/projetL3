@@ -16,7 +16,7 @@ class Create_eleve(BaseModel):
         Nom_eleve: str = Form(...),
         Prenom_eleve : str = Form(...),
         Classe_eleve :str = Form(...),
-        Numero_eleve : int = Form(...),
+        Numero_eleve : int = Form(...)
         
     ):
         
@@ -24,7 +24,7 @@ class Create_eleve(BaseModel):
             Nom_eleve=Nom_eleve,
             Prenom_eleve=Prenom_eleve,
             Classe_eleve=Classe_eleve,
-            Numero_eleve=Numero_eleve,
+            Numero_eleve=Numero_eleve
             
         )
 

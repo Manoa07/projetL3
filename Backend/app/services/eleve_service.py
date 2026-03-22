@@ -68,6 +68,7 @@ def get_eleve(db):
 
 
 
+
 def get_eleve_id(eleve_num,eleve_class, db):
     eleve_verifie= db.query(Eleve).filter(
         and_(

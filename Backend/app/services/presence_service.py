@@ -1,9 +1,16 @@
 from sqlite3 import IntegrityError
 from fastapi import HTTPException
+from sqlalchemy import and_
 from models.presence import Presence
 
 def create_presence(presence,db):
-    presence_verifie=db.query(Presence).filter(Presence.id_eleve==presence.id_eleve and Presence.id_cours==presence.id_cours and Presence.Date_presence==presence.Date_presence).first()
+    presence_verifie=db.query(Presence).filter(
+        and_(
+            Presence.id_eleve==presence.id_eleve,
+            Presence.id_cours==presence.id_cours,
+            Presence.Date_presence==presence.Date_presence
+            )
+        ).first()
     if not presence_verifie:   
         new_presence= Presence(
         id_cours=presence.id_cours,
@@ -21,7 +28,7 @@ def create_presence(presence,db):
             print(e)
     else:
         raise HTTPException(
-            status_code=401,
+            status_code=409,
             detail="presence existant"
         )
 def get_presence_all(eleve_id,db):

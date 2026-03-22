@@ -1,8 +1,9 @@
+
 import cv2
 import numpy as np
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
-from Presence.presence import SystemePresence # Import de votre classe existante
+#from Presence.presence import SystemePresence # Import de votre classe existante
 
 class presenceTheard(QThread):
     # Signal pour envoyer l'image à l'interface
@@ -11,7 +12,7 @@ class presenceTheard(QThread):
     def __init__(self):
         super().__init__()
         self._run_flag = True
-        self.systeme = SystemePresence(seuil_distance=0.6) # Initialisation du modèle
+   #     self.systeme = SystemePresence(seuil_distance=0.6) # Initialisation du modèle
 
     def run(self):
         cap = cv2.VideoCapture(0)

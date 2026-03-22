@@ -103,11 +103,11 @@ class PresenceInterface(QWidget):
         container_layout.addWidget(self.camera_view)
         
         # --- INITIALISATION DU THREAD VIDEO ---
-        self.video_thread = presenceTheard()
-        self.video_thread.change_pixmap_signal.connect(self.camera_view.update_frame)
+        #self.video_thread = presenceTheard()
+        #self.video_thread.change_pixmap_signal.connect(self.camera_view.update_frame)
         # Connecter le signal de détection pour mettre à jour le label de présence
-        self.video_thread.student_detected_signal.connect(self.update_presence_label)
-        self.video_thread.start()
+        #self.video_thread.student_detected_signal.connect(self.update_presence_label)
+        #self.video_thread.start()
         
         # Bouton d'arrêt
         self.stop_btn = QPushButton("⏹ ARRÊTER LE SCAN")

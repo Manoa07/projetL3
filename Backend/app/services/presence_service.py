@@ -15,7 +15,6 @@ def create_presence(presence,db):
         new_presence= Presence(
             id_cours=presence.id_cours,
             id_eleve=presence.id_eleve,
-            Cours_eleve=presence.Cours_eleve,
             Status_presence=presence.Status_presence,
             Heure_presence=presence.Heure_presence,
             Date_presence=presence.Date_presence

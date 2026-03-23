@@ -1,3 +1,4 @@
+import json
 import pickle
 import shutil
 from sqlite3 import IntegrityError
@@ -106,7 +107,14 @@ def get_eleve(db):
         )
     for e in eleve_verifie:
         if e.embedding:
-            e.embedding = pickle.loads(e.embedding)
+                try:
+                    if isinstance(e.embedding,bytes):
+                        e.embedding = pickle.loads(e.embedding)
+                    elif isinstance(e.embedding,str):
+                        e.embedding = np.array(json.loads(e.embedding),dtype=np.float32)
+                except Exception as e:
+                    print("Erreur decodage embedding : ",e)
+                    e.embedding=None
     return eleve_verifie
 
 

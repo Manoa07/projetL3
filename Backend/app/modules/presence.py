@@ -28,7 +28,20 @@ class SystemePresence:
         base={}
         for eleve in eleves:
             nom_complet = f"{eleve.Nom_eleve} {eleve.Prenom_eleve}"
-            embedding=np.array(eleve.embedding)
+            embedding=eleve.embedding
+            if embedding is None:
+                continue
+            if isinstance(embedding,bytes):
+                try:
+                    embedding=pickle.load(embedding)
+                except Exception as e:
+                    print("Erreur dans pickle : ", e)
+                    continue
+            try:
+                embedding=np.array(embedding, dtype=np.float32)
+            except Exception as e:
+                print("Erreur conversion numpy : ",e)
+                continue
             base[nom_complet]=(eleve.Id_eleve,eleve.Classe_eleve,self.id_cours,embedding)
         return base
 
@@ -46,9 +59,8 @@ class SystemePresence:
         C_e=None
 
         for nom_complet, (id_e , C_e,id_c, emb_ref) in self.base_visages.items():
-            if isinstance(emb_ref,str):
-                emb_ref=np.array(json.loads(emb_ref),dtype=np.float32)
-            emb_ref=np.array(emb_ref,dtype=np.float32)
+            if emb_ref is None : 
+                continue
             dist = np.linalg.norm(embedding - emb_ref)
             if dist < min_dist:
                 min_dist = dist
@@ -56,10 +68,10 @@ class SystemePresence:
                 Id_cours=id_c
                 Id_eleve = id_e
                 Classe_eleve=C_e
-            return min_dist,Nom_complet ,Id_eleve,Id_cours, Classe_eleve
+            
 
         if min_dist < self.seuil:
-            return Nom_complet, min_dist, id_e ,id_c,C_e
+            return Nom_complet, min_dist, Id_eleve ,Id_cours,Classe_eleve
         else:
             return None, None, None ,None,None
 
@@ -83,7 +95,7 @@ class SystemePresence:
             if reponse:
                 print("presence enregistrer")
         except Exception as e:
-            print(e)
+            raise e
 
     def traiter_image(self, frame):
             resultat=[]
@@ -105,6 +117,8 @@ class SystemePresence:
                     continue
 
                 embedding = self.obtenir_embedding(face)
+                if embedding is None:
+                    continue
                 nom_complet, mindist, id_eleve,id_cours,classe_eleve = self.comparer_visage(embedding)
     
                 if nom_complet:

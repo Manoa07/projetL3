@@ -1,3 +1,5 @@
+import time
+
 from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton, 
                              QStackedWidget, QFrame, QLabel, QScrollArea)
 from PyQt6.QtCore import Qt
@@ -8,6 +10,8 @@ from components.alertCard import AlertCard
 
 class SurveillanceInterface(QWidget):
     def __init__(self, back_to_home_callback):
+        self.last_alert_time = 0
+        self.alert_cooldown = 5
         super().__init__()
         self.back_to_home = back_to_home_callback
         self.live_view = None 
@@ -127,6 +131,11 @@ class SurveillanceInterface(QWidget):
         main_layout.addWidget(alerts_panel)
 
     def add_new_alert(self, message, time_str):
+        current_time=time.time()
+        if current_time-self.last_alert_time < self.alert_cooldown:
+            return
+        self.last_alert_time= current_time
+        
         if hasattr(self, 'alert_scroll_layout'):
             new_card = AlertCard(message, time_str, critical=True)
             self.alert_scroll_layout.insertWidget(0, new_card)

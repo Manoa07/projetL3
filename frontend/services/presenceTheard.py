@@ -59,7 +59,7 @@ class presenceTheard(QThread):
                 self.change_pixmap_signal.emit(qt_image)
             except Exception as e:
                 print(e)
-            time.sleep(0.06)
+            
         cap.release()
 
     def stop(self):

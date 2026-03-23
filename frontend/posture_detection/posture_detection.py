@@ -11,31 +11,32 @@ from mediapipe.tasks.python.vision import PoseLandmarker
 from mediapipe.tasks.python.vision import PoseLandmarkerOptions
 from mediapipe.tasks.python.vision import RunningMode
 try:
-    # When `posture_detection` is a package (recommended).
     from .mouvement import detect_suspicious_movements, detect_whispering
 except Exception:
-    # When run as a standalone script from the repo root or another cwd.
     from mouvement import detect_suspicious_movements, detect_whispering
 
 # Chemin vers le modèle
 current_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(current_dir, "../models/pose_landmarker.task")  # Ajuste selon ta structure
+model_path = os.path.join(current_dir, "../models/pose_landmarker.task")
 _DEBUG_LOG_PATH = os.path.abspath(os.path.join(current_dir, "..", "debug-1f4ecf.log"))
 _DEBUG_LOG_PATH_FALLBACK = os.path.join(tempfile.gettempdir(), "debug-1f4ecf.log")
 
 options = PoseLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=model_path),
-    # VIDEO mode enables temporal tracking inside MediaPipe (faster and more stable than IMAGE per frame).
     running_mode=RunningMode.VIDEO,
     num_poses=10
 )
 
-# Tolérance de visibilité
-define_precision_tolerance = 0.5
+# Tolérance de visibilité (augmentée pour ignorer les points peu fiables)
+define_precision_tolerance = 0.6
 
-# Tracking étudiants (stocke position uniquement)
+# Tracking étudiants
 students = {}
 student_id_counter = 0
+
+# Compteurs de suspicion par (student_id, type_event)
+suspicion_counters = {}
+SUSPICION_THRESHOLD = 5   # nombre de frames consécutives nécessaires
 
 # Connexions squelette
 POSE_CONNECTIONS = [
@@ -48,7 +49,7 @@ POSE_CONNECTIONS = [
     (24,26),(26,28),(28,32)
 ]
 
-# --------- Utils (lightweight, no extra deps) ---------
+# --------- Utils ---------
 def _debug_log(hypothesis_id, location, message, data=None, run_id="pre-fix"):
     payload = {
         "sessionId": "1f4ecf",
@@ -72,13 +73,10 @@ def _debug_log(hypothesis_id, location, message, data=None, run_id="pre-fix"):
     except Exception:
         pass
     try:
-        # Last-resort visibility if file writes fail.
         print("[debug-log-failed]", payload)
     except Exception:
         pass
 
-
-# #region agent log
 print(
     "[agent-debug] module import",
     {
@@ -103,45 +101,33 @@ _debug_log(
         "debug_log_path": _DEBUG_LOG_PATH,
     },
 )
-# #endregion agent log
 
 try:
-    # #region agent log
     _debug_log(
         "H1",
         "posture_detection.py:module:pose_init",
         "Creating PoseLandmarker",
         {"running_mode": str(options.running_mode)},
     )
-    # #endregion agent log
     pose_landmarker = PoseLandmarker.create_from_options(options)
 except Exception as e:
-    # #region agent log
     _debug_log(
         "H1",
         "posture_detection.py:module:pose_init:exception",
         "PoseLandmarker init failed",
         {"type": type(e).__name__, "error": str(e)},
     )
-    # #endregion agent log
     raise
-
 
 def _l1_dist(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
 
 def _l2_dist(a, b):
     dx = a[0] - b[0]
     dy = a[1] - b[1]
     return (dx * dx + dy * dy) ** 0.5
 
-
 def _estimate_person_scale(points):
-    """
-    Returns an approximate pixel scale for the person (shoulder width preferred),
-    falling back to hip width, then torso length. If insufficient landmarks, returns None.
-    """
     left_shoulder = points[11]
     right_shoulder = points[12]
     if left_shoulder and right_shoulder:
@@ -167,18 +153,12 @@ def _estimate_person_scale(points):
 
     return None
 
-
 def _scaled_threshold(scale, fallback_px, factor):
-    """
-    Scale a pixel threshold with the person's apparent size.
-    If scale is unavailable, fall back to the original hardcoded pixel threshold.
-    """
     if scale is None:
         return float(fallback_px)
     return max(10.0, float(scale) * float(factor))
 
-
-# Détection tête tournée
+# Détection tête tournée (version moins sensible)
 def detect_head_turn(points):
     nose = points[0]
     left_ear = points[7]
@@ -186,54 +166,46 @@ def detect_head_turn(points):
     if nose and left_ear and right_ear:
         center = (left_ear[0] + right_ear[0]) / 2
         scale = _estimate_person_scale(points)
-        # Original threshold: 40px. Now scale-aware for consistent behavior across resolutions/distances.
-        thr = _scaled_threshold(scale, fallback_px=40, factor=0.33)
+        thr = _scaled_threshold(scale, fallback_px=50, factor=0.5)   # plus large
         if abs(nose[0] - center) > thr:
-            return "Tete tourne" 
+            return "Tete tourne"
     return None
 
-# Détection main sous table
 def detect_hand_under_table(points):
     left_wrist = points[15]
     right_wrist = points[16]
     left_hip = points[23]
     right_hip = points[24]
     scale = _estimate_person_scale(points)
-    # Original threshold: 50px below hip. Use scale-aware vertical margin.
-    thr = _scaled_threshold(scale, fallback_px=50, factor=0.40)
+    thr = _scaled_threshold(scale, fallback_px=70, factor=0.6)   # plus haut
     if left_wrist and left_hip and left_wrist[1] > left_hip[1] + thr:
         return "Main gauche sous table"
     if right_wrist and right_hip and right_wrist[1] > right_hip[1] + thr:
         return "Main droite sous table"
     return None
 
-# Détection téléphone
 def detect_phone(points):
     nose = points[0]
     left_wrist = points[15]
     right_wrist = points[16]
     if nose:
         scale = _estimate_person_scale(points)
-        thr_x = _scaled_threshold(scale, fallback_px=50, factor=0.42)
-        thr_y = _scaled_threshold(scale, fallback_px=80, factor=0.65)
+        thr_x = _scaled_threshold(scale, fallback_px=70, factor=0.6)
+        thr_y = _scaled_threshold(scale, fallback_px=100, factor=0.8)
         if left_wrist and abs(left_wrist[0]-nose[0]) < thr_x and abs(left_wrist[1]-nose[1]) < thr_y:
             return "Telephone suspect"
         if right_wrist and abs(right_wrist[0]-nose[0]) < thr_x and abs(right_wrist[1]-nose[1]) < thr_y:
             return "Telephone suspect"
     return None
 
-last_sent = {}  
+last_sent = {}
 
 def send_alert_to_api(id_eleve, remarque):
     key = f"{id_eleve}-{remarque}"
     now = time.time()
-
-    # Anti-spam (5 secondes)
     if key in last_sent and now - last_sent[key] < 5:
         return
-
     last_sent[key] = now
-
     try:
         data = {
             "id_examen": 1,
@@ -241,7 +213,6 @@ def send_alert_to_api(id_eleve, remarque):
             "Status_examen": "suspect",
             "Remarque": remarque
         }
-
         requests.post(
             "http://127.0.0.1:8000/surveillance/create",
             json=data,
@@ -253,8 +224,6 @@ def send_alert_to_api(id_eleve, remarque):
 def main():
     global student_id_counter
 
-    # Capture webcam
-    # #region agent log
     _debug_log(
         "H1",
         "posture_detection.py:main:start",
@@ -267,10 +236,8 @@ def main():
             "running_mode": str(options.running_mode),
         },
     )
-    # #endregion agent log
 
     cap = cv2.VideoCapture(0)
-    # Reduce internal buffering to lower latency (best-effort; may be ignored by some backends).
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -283,17 +250,13 @@ def main():
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
-            # #region agent log
             _debug_log("H2", "posture_detection.py:main:cap_read", "Camera read failed", {"ret": ret})
-            # #endregion agent log
             break
 
         h, w, _ = frame.shape
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
-        # VIDEO mode requires strictly increasing timestamps.
-        # Some backends report odd/high FPS values which can cause int-truncation duplicates.
         computed_ms = int((frame_idx * 1000.0) / fps)
         wall_ms = int((time.time() - start_time) * 1000.0)
         timestamp_ms = computed_ms if computed_ms > 0 else wall_ms
@@ -303,42 +266,24 @@ def main():
         frame_idx += 1
 
         try:
-            # #region agent log
-            _debug_log(
-                "H3",
-                "posture_detection.py:main:detect_for_video",
-                "Calling detect_for_video",
-                {
-                    "timestamp_ms": timestamp_ms,
-                    "computed_ms": computed_ms,
-                    "wall_ms": wall_ms,
-                    "last_timestamp_ms": last_timestamp_ms,
-                    "fps": fps,
-                    "frame_w": w,
-                    "frame_h": h,
-                },
-            )
-            # #endregion agent log
             result = pose_landmarker.detect_for_video(mp_image, timestamp_ms)
         except Exception as e:
-            # #region agent log
             _debug_log(
                 "H3",
                 "posture_detection.py:main:detect_for_video:exception",
                 "detect_for_video raised",
                 {"type": type(e).__name__, "error": str(e)},
             )
-            # #endregion agent log
             raise
-        suspicious_movements = []
+
+        # Pour les alertes globales (chuchotement) on les traite séparément plus tard
+        all_global_alerts = []
 
         if result.pose_landmarks:
             noses = []
-
+            # Premier passage pour attribuer les ID et stocker les points
             for landmarks in result.pose_landmarks:
                 points = [None] * len(landmarks)
-
-                # Convert landmarks once (avoid per-point list growth).
                 for i, lm in enumerate(landmarks):
                     if lm.visibility > define_precision_tolerance:
                         x = int(lm.x * w)
@@ -361,21 +306,6 @@ def main():
                 if p12:
                     cv2.circle(frame, p12, 8, (255, 0, 0), -1)
 
-                # Analyse comportement
-                events = []
-
-                head = detect_head_turn(points)
-                if head:
-                    events.append(head)
-
-                hand = detect_hand_under_table(points)
-                if hand:
-                    events.append(hand)
-
-                phone = detect_phone(points)
-                if phone:
-                    events.append(phone)
-
                 # Tracking étudiant
                 nose = points[0]
                 if nose:
@@ -383,8 +313,6 @@ def main():
 
                     assigned_id = None
                     best_dist = None
-
-                    # Parcours des étudiants connus
                     for sid, pos in students.items():
                         dist = _l1_dist(pos, nose)
                         if dist < 80 and (best_dist is None or dist < best_dist):
@@ -397,18 +325,36 @@ def main():
 
                     students[assigned_id] = nose
 
-                    # # Affichage étudiant
-                    # cv2.putText(
-                    #     frame,
-                    #     f"Etudiant {assigned_id}",
-                    #     (nose[0], nose[1] - 40),
-                    #     cv2.FONT_HERSHEY_SIMPLEX,
-                    #     0.7,
-                    #     (255, 255, 255),
-                    #     2,
-                    # )
+                    # Analyse comportementale pour cet étudiant
+                    events = []
+                    head = detect_head_turn(points)
+                    if head:
+                        events.append(head)
+                    hand = detect_hand_under_table(points)
+                    if hand:
+                        events.append(hand)
+                    phone = detect_phone(points)
+                    if phone:
+                        events.append(phone)
 
-                    # Affichage événements (sans score)
+                    # Mise à jour des compteurs pour cet étudiant
+                    # On considère que s'il n'y a pas d'événement, on efface ses compteurs
+                    # (ou on les décrémente ? Ici on efface totalement pour éviter les alertes persistantes)
+                    if events:
+                        for e in events:
+                            key = (assigned_id, e)
+                            suspicion_counters[key] = suspicion_counters.get(key, 0) + 1
+                            if suspicion_counters[key] >= SUSPICION_THRESHOLD:
+                                send_alert_to_api(assigned_id, e)
+                                # Réinitialiser pour ne pas renvoyer immédiatement
+                                suspicion_counters[key] = 0
+                    else:
+                        # Pas d'événement : on réinitialise tous les compteurs de cet étudiant
+                        keys_to_remove = [k for k in suspicion_counters if k[0] == assigned_id]
+                        for k in keys_to_remove:
+                            del suspicion_counters[k]
+
+                    # Affichage des événements sur l'image (optionnel)
                     y = nose[1] + 20
                     for e in events:
                         cv2.putText(
@@ -420,19 +366,20 @@ def main():
                             (0, 0, 255),
                             2,
                         )
-                        send_alert_to_api(assigned_id,e)
                         y += 20
 
-                # Détection mouvements suspects déjà existante
-                suspicious_movements.extend(detect_suspicious_movements(points))
+                # On peut aussi ajouter les alertes du module mouvement (désactivées ici pour éviter doublons)
+                # mais on conserve pour les alertes globales
+                # suspicious_movements = detect_suspicious_movements(points)  # désactivé
+                # all_global_alerts.extend(suspicious_movements)
 
-            # Détection événements multi-personnes (chuchotement)
+            # Détection chuchotement (global)
             whisper_alerts = detect_whispering(noses)
             if whisper_alerts:
-                suspicious_movements.extend(whisper_alerts)
+                all_global_alerts.extend(whisper_alerts)
 
-        # Affichage alertes
-        if suspicious_movements:
+        # Affichage des alertes globales (chuchotement)
+        if all_global_alerts:
             cv2.putText(
                 frame,
                 "Postures suspectes detectees!",
@@ -443,7 +390,7 @@ def main():
                 2,
             )
             y_offset = 160
-            for movement in suspicious_movements:
+            for movement in all_global_alerts:
                 cv2.putText(
                     frame,
                     f"- {movement}",
@@ -454,6 +401,8 @@ def main():
                     2,
                 )
                 y_offset += 30
+                # Optionnel : envoyer alerte globale ? On peut envoyer pour chaque étudiant, mais c'est complexe.
+                # Ici on choisit de ne pas envoyer d'alerte API pour les alertes globales.
 
         cv2.imshow("SmartEdu", frame)
         key = cv2.waitKey(1) & 0xFF
@@ -466,7 +415,6 @@ def main():
 
     cap.release()
     cv2.destroyAllWindows()
-
 
 if __name__ == "__main__":
     main()

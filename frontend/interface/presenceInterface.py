@@ -5,7 +5,7 @@ import requests
 from components.cameraView import CameraView
 from views.elevesView import ElevesView
 from views.ajoutEleveView import AjoutEleveView
-# Import du thread de service pour la gestion de la caméra
+from views.ajoutCoursView import AjoutCoursView
 from services.presenceTheard import presenceTheard 
 from PyQt6.QtWidgets import QComboBox
 class PresenceInterface(QWidget):
@@ -38,11 +38,13 @@ class PresenceInterface(QWidget):
         self.btn_cam = self.create_nav_btn("📷\nLIVE", btn_style, 0)
         self.btn_list = self.create_nav_btn("📋\nÉLÈVES", btn_style, 1)
         self.btn_add = self.create_nav_btn("➕\nAJOUT", btn_style, 2)
+        self.btn_add_cours = self.create_nav_btn("📚\nCOURS", btn_style, 3)
         self.btn_cam.setChecked(True)
 
         sidebar_layout.addWidget(self.btn_cam)
         sidebar_layout.addWidget(self.btn_list)
         sidebar_layout.addWidget(self.btn_add)
+        sidebar_layout.addWidget(self.btn_add_cours)
         sidebar_layout.addStretch()
 
         btn_back = QPushButton("🏠\nAccueil")
@@ -61,6 +63,7 @@ class PresenceInterface(QWidget):
         # Autres pages
         self.stack.addWidget(ElevesView()) # Index 1
         self.stack.addWidget(AjoutEleveView()) # Index 2
+        self.stack.addWidget(AjoutCoursView()) # Index 3
 
         layout.addWidget(self.stack, stretch=5)
     def load_cours(self):
@@ -77,7 +80,6 @@ class PresenceInterface(QWidget):
                     f"{cours['Nom_cours']} - {cours['Salle_cours']}",
                     cours["Id_cours"]
                 )
-
         except Exception as e:
             print("Erreur chargement cours :", e)
     def setup_placeholder_page(self):

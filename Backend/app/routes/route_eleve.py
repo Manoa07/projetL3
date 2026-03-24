@@ -11,7 +11,7 @@ router= APIRouter(prefix="/eleve",tags=["Eleves"])
 def create_eleve_route(
     db: db_dependancy,
     eleve : Create_eleve =Depends(Create_eleve.as_form),
-    photo :UploadFile =File(...),
+    photo : UploadFile =File(...),
     images : List[UploadFile] = File(...)
     
     ):

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QHeaderView
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QTableWidget,QPushButton,QTableWidgetItem, QHeaderView
 
 from PyQt6.QtCore import QTimer, Qt
 import httpx
@@ -6,8 +6,24 @@ import asyncio
 from services.events import global_signals # Importation du bus d'événements
 class ElevesView(QWidget):
     def __init__(self):
+        
         super().__init__()
         layout = QVBoxLayout(self)
+        self.refresh_button = QPushButton("🔄 Rafraîchir")
+        self.refresh_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4facfe;
+                color: white;
+                padding: 6px;
+                border-radius: 5px;
+                }
+            QPushButton:hover {
+                background-color: #3a8edb;
+                }
+    """)
+        self.refresh_button.clicked.connect(self.refresh_data)
+
+        layout.addWidget(self.refresh_button)        
 
         # Titre de la section
         self.title_label = QLabel("<b style='color:#4facfe; font-size:18px;'>LISTE DES ÉLÈVES - ISAIA L3</b>")
@@ -30,6 +46,7 @@ class ElevesView(QWidget):
                 border: 1px solid #2d2f41;
             }
         """)
+
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self.table)
 
@@ -42,7 +59,15 @@ class ElevesView(QWidget):
     
     def refresh_data(self):
         """Lance la tâche asynchrone de récupération des données"""
-        asyncio.create_task(self.load_eleve())
+        async def safe_load():
+            try:
+                self.refresh_button.setEnabled(False)  # Désactive le bouton pendant le chargement
+                await self.load_eleve()
+            except Exception as error:
+                print("Erreur lors du rafraîchissement :", error)
+            finally:
+                self.refresh_button.setEnabled(True)  # Réactive le bouton une fois le chargement terminé
+        asyncio.create_task(safe_load())
     
     async def load_eleve(self):
         """Récupère les élèves depuis l'API FastAPI"""

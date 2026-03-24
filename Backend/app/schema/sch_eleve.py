@@ -41,7 +41,7 @@ class Reponse_eleve(BaseModel):
     Classe_eleve:str
     Numero_eleve:int
     embedding:Optional[List[float]]=None
-    presence:List[Reponse_presence]
+    presence:Optional[List[Reponse_presence]]=None
     
     class Config:
         from_attributes=True

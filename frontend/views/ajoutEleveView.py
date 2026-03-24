@@ -184,7 +184,6 @@ class AjoutEleveView(QWidget):
         self.numero.clear()
         self.photo_label.clear()
         self.photo_label.setText("Format\nPortrait")
-    import cv2
 
     def start_capture(self):
         self.captured_images = []

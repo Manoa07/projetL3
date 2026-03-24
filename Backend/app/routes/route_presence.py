@@ -22,14 +22,12 @@ def get_presence_route(eleve_id :int,db:db_dependancy):
     return get_presence(eleve_id,db)
 
 @router.post("/detecter")
-async def detect(background_tasks: BackgroundTasks,db: db_dependancy,id_cours:int=Form(...) ,file: UploadFile = File(...)):
+async def detect(db: db_dependancy,id_cours:int=Form(...) ,file: UploadFile = File(...)):
     systeme=SystemePresence(id_cours,db,seuil_distance=0.8)
     contents = await file.read()
     frame = cv2.imdecode(np.frombuffer(contents, np.uint8), cv2.IMREAD_COLOR)
 
     resultats = systeme.traiter_image(frame)
 
-    for r in resultats:
-        background_tasks.add_task(create_presence_route, r)
 
     return {"resultats": resultats}

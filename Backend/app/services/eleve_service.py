@@ -97,7 +97,7 @@ def detect_face(img):
     print("TYPE FACE:", type(face))
     print("IMG:", type(img), img.shape if img is not None else None)
     print("FACE:", type(face), face.shape if isinstance(face, np.ndarray) else None)
-    return face 
+    return face  
 def get_eleve(db):
     eleve_verifie=db.query(Eleve).all()
     if not eleve_verifie:
@@ -105,17 +105,34 @@ def get_eleve(db):
             status_code=404,
             detail="Aucun eleve trouvé"
         )
+    resultat=[]
     for e in eleve_verifie:
+        emb=None
         if e.embedding:
                 try:
                     if isinstance(e.embedding,bytes):
-                        e.embedding = pickle.loads(e.embedding)
+                        emb= pickle.loads(e.embedding)
                     elif isinstance(e.embedding,str):
-                        e.embedding = np.array(json.loads(e.embedding),dtype=np.float32)
-                except Exception as e:
-                    print("Erreur decodage embedding : ",e)
-                    e.embedding=None
-    return eleve_verifie
+                        emb = np.array(json.loads(e.embedding),dtype=np.float32)
+                except Exception as err:
+                    print("Erreur decodage embedding : ",err)
+                    emb=None
+        resultat.append({
+            "Id_eleve": e.Id_eleve,
+            "Numero_eleve": e.Numero_eleve,
+            "Nom_eleve": e.Nom_eleve,
+            "Prenom_eleve": e.Prenom_eleve,
+            "Classe_eleve": e.Classe_eleve,
+            "embedding": emb.tolist() if emb is not None else None,
+            "presence":[{
+                "Date_presence": p.Date_presence.isoformat(),
+                "Heure_presence": p.Heure_presence.isoformat(),
+                "Status_presence": p.Status_presence,
+                "id_cours": p.id_cours,
+                "id_eleve": p.id_eleve
+            } for p in e.presence]
+        })   
+    return resultat
 
 
 

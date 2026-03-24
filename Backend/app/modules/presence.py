@@ -27,13 +27,13 @@ class SystemePresence:
         eleves=get_eleve(self.db)
         base={}
         for eleve in eleves:
-            nom_complet = f"{eleve.Nom_eleve} {eleve.Prenom_eleve}"
-            embedding=eleve.embedding
+            nom_complet = f"{eleve['Nom_eleve']} {eleve['Prenom_eleve']}"
+            embedding=eleve['embedding']
             if embedding is None:
                 continue
             if isinstance(embedding,bytes):
                 try:
-                    embedding=pickle.load(embedding)
+                    embedding=pickle.loads(embedding)
                 except Exception as e:
                     print("Erreur dans pickle : ", e)
                     continue
@@ -42,7 +42,7 @@ class SystemePresence:
             except Exception as e:
                 print("Erreur conversion numpy : ",e)
                 continue
-            base[nom_complet]=(eleve.Id_eleve,eleve.Classe_eleve,self.id_cours,embedding)
+            base[nom_complet]=(eleve['Id_eleve'],eleve['Classe_eleve'],self.id_cours,embedding)
         return base
 
     def obtenir_embedding(self, image_visage):

@@ -1,13 +1,23 @@
-from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QPushButton, 
-                             QFrame, QLabel, QStackedWidget, QScrollArea)
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
+from PyQt6.QtCore import Qt, QSize
 import requests
+from components.icon_loader import load_icon
+from components.theme import NAV_BUTTON_STYLE
 from components.cameraView import CameraView
 from views.elevesView import ElevesView
 from views.ajoutEleveView import AjoutEleveView
 from views.ajoutCoursView import AjoutCoursView
-from services.presenceTheard import presenceTheard 
-from PyQt6.QtWidgets import QComboBox
+from services.presenceTheard import PresenceThread
 class PresenceInterface(QWidget):
     def __init__(self, back_to_home_callback):
         super().__init__()
@@ -21,24 +31,22 @@ class PresenceInterface(QWidget):
 
         # --- 1. BARRE LATÉRALE ---
         self.sidebar = QFrame()
-        self.sidebar.setFixedWidth(100)
-        self.sidebar.setStyleSheet("background-color: #1a1c2e; border-right: 1px solid #2d2f41;")
+        self.sidebar.setObjectName("Sidebar")
+        self.sidebar.setFixedWidth(108)
+        self.sidebar.setStyleSheet("""
+            QFrame#Sidebar {
+                background-color: #151826;
+                border-right: 1px solid #24273d;
+            }
+        """)
         sidebar_layout = QVBoxLayout(self.sidebar)
-        
-        btn_style = """
-            QPushButton { 
-                background: transparent; border: none; color: #7a7c8c; 
-                font-size: 10px; padding: 15px; font-weight: bold;
-            }
-            QPushButton:checked { 
-                background: #24273d; color: #4facfe; border-left: 3px solid #4facfe; 
-            }
-        """
+        sidebar_layout.setContentsMargins(10, 12, 10, 12)
+        sidebar_layout.setSpacing(8)
 
-        self.btn_cam = self.create_nav_btn("📷\nLIVE", btn_style, 0)
-        self.btn_list = self.create_nav_btn("📋\nÉLÈVES", btn_style, 1)
-        self.btn_add = self.create_nav_btn("➕\nAJOUT", btn_style, 2)
-        self.btn_add_cours = self.create_nav_btn("📚\nCOURS", btn_style, 3)
+        self.btn_cam = self.create_nav_btn("LIVE", 0, load_icon("live"))
+        self.btn_list = self.create_nav_btn("ÉLÈVES", 1, load_icon("users"))
+        self.btn_add = self.create_nav_btn("AJOUT", 2, load_icon("add"))
+        self.btn_add_cours = self.create_nav_btn("COURS", 3, load_icon("course"))
         self.btn_cam.setChecked(True)
 
         sidebar_layout.addWidget(self.btn_cam)
@@ -47,8 +55,9 @@ class PresenceInterface(QWidget):
         sidebar_layout.addWidget(self.btn_add_cours)
         sidebar_layout.addStretch()
 
-        btn_back = QPushButton("🏠\nAccueil")
-        btn_back.setStyleSheet("color: #e74c3c; border: none; padding: 15px; font-weight: bold;")
+        btn_back = QPushButton("Accueil")
+        btn_back.setIcon(load_icon("home"))
+        btn_back.setStyleSheet("color: #e74c3c; padding: 14px; font-weight: 700; border-radius: 12px;")
         btn_back.clicked.connect(self.handle_back_home)
         sidebar_layout.addWidget(btn_back)
 
@@ -65,6 +74,7 @@ class PresenceInterface(QWidget):
         self.stack.addWidget(AjoutEleveView()) # Index 2
         self.stack.addWidget(AjoutCoursView()) # Index 3
 
+        self.stack.setStyleSheet("background: transparent;")
         layout.addWidget(self.stack, stretch=5)
     def load_cours(self):
         try:
@@ -86,17 +96,25 @@ class PresenceInterface(QWidget):
         """Crée l'interface d'attente avec le bouton de démarrage"""
         self.cam_placeholder = QWidget()
         placeholder_layout = QVBoxLayout(self.cam_placeholder)
+        placeholder_layout.setContentsMargins(24, 24, 24, 24)
+        placeholder_layout.setSpacing(16)
         
         title = QLabel("<b style='color:#4facfe; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
         placeholder_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
 
-        self.start_btn = QPushButton("🚀 ACTIVER LE SCAN DE PRÉSENCE")
+        self.start_btn = QPushButton("ACTIVER LE SCAN DE PRÉSENCE")
+        self.start_btn.setIcon(load_icon("play"))
         self.start_btn.setFixedSize(300, 70)
         self.start_btn.setStyleSheet("""
             QPushButton {
-                background: #4facfe; color: white; font-weight: bold; border-radius: 10px; font-size: 13px;
+                background: #4facfe;
+                color: white;
+                font-weight: 700;
+                border-radius: 12px;
+                font-size: 13px;
+                padding: 12px 16px;
             }
-            QPushButton:hover { background: #00f2fe; }
+            QPushButton:hover { background: #37b8ff; }
         """)
         self.start_btn.clicked.connect(self.start_presence_camera)
         
@@ -107,6 +125,18 @@ class PresenceInterface(QWidget):
         self.stack.insertWidget(0, self.cam_placeholder)
         self.cours_select = QComboBox()
         self.cours_select.setFixedWidth(300)
+        self.cours_select.setStyleSheet("""
+            QComboBox {
+                background: #1a1f2f;
+                border: 1px solid #2a2f45;
+                border-radius: 10px;
+                padding: 10px 12px;
+                color: #f4f7fb;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+        """)
         placeholder_layout.addWidget(self.cours_select, alignment=Qt.AlignmentFlag.AlignCenter)
         # Charger les cours
         self.load_cours()
@@ -124,8 +154,12 @@ class PresenceInterface(QWidget):
         
         container = QWidget()
         container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(24, 24, 24, 24)
+        container_layout.setSpacing(16)
         
-        container_layout.addWidget(QLabel("<b style='color:#4facfe; font-size:18px;'>SCAN EN COURS...</b>"))
+        running_label = QLabel("SCAN EN COURS...")
+        running_label.setStyleSheet("color:#f4f7fb; font-size:18px; font-weight:700; letter-spacing: 1px;")
+        container_layout.addWidget(running_label)
 
 
         # La vue caméra
@@ -133,7 +167,7 @@ class PresenceInterface(QWidget):
         container_layout.addWidget(self.camera_view)
         
         # --- INITIALISATION DU THREAD VIDEO ---
-        self.video_thread = presenceTheard(self.selected_cours_id)
+        self.video_thread = PresenceThread(self.selected_cours_id)
         self.video_thread.change_pixmap_signal.connect(
             self.camera_view.update_frame
         )
@@ -142,9 +176,10 @@ class PresenceInterface(QWidget):
         )
         self.video_thread.start()        
         # Bouton d'arrêt
-        self.stop_btn = QPushButton("⏹ ARRÊTER LE SCAN")
+        self.stop_btn = QPushButton("ARRÊTER LE SCAN")
+        self.stop_btn.setIcon(load_icon("stop"))
         self.stop_btn.setFixedSize(200, 45)
-        self.stop_btn.setStyleSheet("background: #34495e; color: white; border-radius: 5px; font-weight: bold;")
+        self.stop_btn.setStyleSheet("background: #34495e; color: white; border-radius: 12px; padding: 12px 16px; font-weight: 700;")
         self.stop_btn.clicked.connect(self.stop_presence_camera)
         container_layout.addWidget(self.stop_btn, alignment=Qt.AlignmentFlag.AlignCenter)
         
@@ -181,11 +216,13 @@ class PresenceInterface(QWidget):
         self.stop_presence_camera()
         self.back_to_home()
 
-    def create_nav_btn(self, text, style, index):
+    def create_nav_btn(self, text, index, icon):
         btn = QPushButton(text)
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
-        btn.setFixedSize(100, 80)
-        btn.setStyleSheet(style)
+        btn.setFixedSize(100, 86)
+        btn.setIcon(icon)
+        btn.setIconSize(QSize(24, 24))
+        btn.setStyleSheet(NAV_BUTTON_STYLE)
         btn.clicked.connect(lambda: self.stack.setCurrentIndex(index))
         return btn

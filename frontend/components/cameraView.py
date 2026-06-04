@@ -5,14 +5,23 @@ from PyQt6.QtGui import QPixmap, QImage
 class CameraView(QFrame):
     def __init__(self, name, overlay_type):
         super().__init__()
-        self.setStyleSheet("background-color: #000000; border: 2px solid #2d2f41; border-radius: 8px;")
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #0b0d14;
+                border: 1px solid #23283d;
+                border-radius: 18px;
+            }
+        """)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
         
         # Header
         header = QHBoxLayout()
-        header.addWidget(QLabel(f"<b style='color:white;'>{name}</b>"))
-        self.presence = QLabel("PRÉSENTS: --/--")
-        self.presence.setStyleSheet("color: #2ecc71; font-weight: bold;")
+        title = QLabel(f"<b style='color:#f4f7fb; font-size:13px; letter-spacing: 1px;'>{name}</b>")
+        header.addWidget(title)
+        self.presence = QLabel("PRESENTS: --/--")
+        self.presence.setStyleSheet("color: #2ecc71; font-weight: 700;")
         header.addStretch()
         header.addWidget(self.presence)
         layout.addLayout(header)
@@ -20,12 +29,12 @@ class CameraView(QFrame):
         # Zone d'affichage du flux
         self.video_label = QLabel()
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.video_label.setText("INITIALISATION DU FLUX...")
-        self.video_label.setStyleSheet("color: #454859; border: none;")
+        self.video_label.setText("FLUX EN ATTENTE")
+        self.video_label.setStyleSheet("color: #586078; border: none; padding: 12px;")
         layout.addWidget(self.video_label)
 
         footer = QLabel(overlay_type)
-        footer.setStyleSheet("color: #7a7c8c; font-size: 10px; border: none;")
+        footer.setStyleSheet("color: #7a7c8c; font-size: 10px; border: none; letter-spacing: 0.5px;")
         layout.addWidget(footer, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def update_frame(self, qt_image):
@@ -35,4 +44,4 @@ class CameraView(QFrame):
     def clear_view(self):
         """Nettoie l'écran lors de l'arrêt"""
         self.video_label.clear()
-        self.video_label.setText("FLUX ARRÊTÉ")
+        self.video_label.setText("FLUX STOP")

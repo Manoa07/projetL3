@@ -1,8 +1,19 @@
 import sys
-from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel, QFrame
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
+from PyQt6.QtCore import Qt, QSize
 
 # Importation de vos nouveaux modules séparés
+from components.icon_loader import load_icon
+from components.theme import APP_STYLESHEET
 from interface.surveillanceInterface import SurveillanceInterface
 from interface.presenceInterface import PresenceInterface
 
@@ -11,7 +22,7 @@ class ExamGuardApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("Système de Surveillance Intelligent")
         self.resize(1280, 850)
-        self.setStyleSheet("background-color: #0f111a; color: white; font-family: 'Segoe UI';")
+        self.setStyleSheet(APP_STYLESHEET)
         self.init_ui()
 
     def init_ui(self):
@@ -44,31 +55,47 @@ class ExamGuardApp(QMainWindow):
         home_widget = QWidget()
         layout = QVBoxLayout(home_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setContentsMargins(36, 36, 36, 36)
+        layout.setSpacing(22)
 
         title = QLabel("GESTION DE L'INTERFACE")
-        title.setStyleSheet("font-size: 28px; font-weight: bold; color: #4facfe; margin-bottom: 40px;")
+        title.setStyleSheet("font-size: 30px; font-weight: 800; color: #f4f7fb; letter-spacing: 1.6px;")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(20)
         
         style = """
             QPushButton {
-                background-color: #1a1c2e; border: 2px solid #2d2f41; border-radius: 20px;
-                color: white; font-size: 20px; font-weight: bold; padding: 60px; min-width: 250px;
+                background-color: #161a28;
+                border: 1px solid #2a2f45;
+                border-radius: 24px;
+                color: white;
+                font-size: 17px;
+                font-weight: 700;
+                padding: 40px 34px;
+                min-width: 250px;
+                min-height: 170px;
+                text-align: center;
             }
-            QPushButton:hover { background-color: #24273d; border-color: #4facfe; }
+            QPushButton:hover {
+                background-color: #20263b;
+                border-color: #4facfe;
+            }
         """
-
-        btn_surv = QPushButton("🛡️ SURVEILLANCE")
+        btn_surv = QPushButton("SURVEILLANCE")
+        btn_surv.setIcon(load_icon("live"))
+        btn_surv.setIconSize(QSize(24, 24))
         btn_surv.setStyleSheet(style)
         btn_surv.clicked.connect(lambda: self.stack.setCurrentIndex(1))
 
-        btn_pres = QPushButton("👥 PRÉSENCE")
+        btn_pres = QPushButton("PRÉSENCE")
+        btn_pres.setIcon(load_icon("users"))
+        btn_pres.setIconSize(QSize(24, 24))
         btn_pres.setStyleSheet(style)
         btn_pres.clicked.connect(lambda: self.stack.setCurrentIndex(2))
 
         btn_layout.addWidget(btn_surv)
-        btn_layout.addSpacing(40)
         btn_layout.addWidget(btn_pres)
         
         layout.addLayout(btn_layout)

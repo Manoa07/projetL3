@@ -1,9 +1,15 @@
 from sqlite3 import IntegrityError
 from fastapi import HTTPException
+from sqlalchemy import and_
 from models.surveillance import Surveillance
 
 def create_surveillance(surveillance,db):
-    surveillance_verifie=db.query(Surveillance).filter(Surveillance.id_eleve==surveillance.id_eleve and Surveillance.id_examen==surveillance.id_examen).first()
+    surveillance_verifie=db.query(Surveillance).filter(
+        and_(
+            Surveillance.id_eleve==surveillance.id_eleve,
+            Surveillance.id_examen==surveillance.id_examen
+        )
+    ).first()
     if not surveillance_verifie:
         new_surveillance=Surveillance(
             id_examen=surveillance.id_examen,

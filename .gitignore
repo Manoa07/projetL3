@@ -12,7 +12,11 @@ postman/
 __pycache__/
 *.sql
 data/
-
+*.log
+.vscode/
+.codex/
+Backend/.vscode/
+frontend/.vscode/
 
 
 

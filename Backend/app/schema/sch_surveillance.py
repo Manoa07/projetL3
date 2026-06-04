@@ -6,7 +6,7 @@ class Create_surveillance(BaseModel):
     Remarque:str
     Status_examen:str
     class Config:
-        from_attribute=True
+        from_attributes=True
 
 class Eleve_surveillee(BaseModel):
     id_eleve:int
@@ -14,4 +14,4 @@ class Eleve_surveillee(BaseModel):
     Remarque:str
     Status_examen:str
     class Config:
-        from_attribute=True
+        from_attributes=True

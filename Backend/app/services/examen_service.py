@@ -1,9 +1,16 @@
 from sqlite3 import IntegrityError
 from fastapi import HTTPException
+from sqlalchemy import and_
 from models.examen import Examen
 
 def create_examen(examen,db):
-    examen_verifie=db.query(Examen).filter(Examen.date_examen==examen.date_examen and Examen.id_cours==examen.id_cours and Examen.Salle_examen==examen.salle_examen).first()
+    examen_verifie=db.query(Examen).filter(
+        and_(
+            Examen.date_examen==examen.date_examen,
+            Examen.id_cours==examen.id_cours,
+            Examen.Salle_examen==examen.salle_examen
+        )
+    ).first()
     if not examen_verifie:
         new_examen =Examen(
         id_cours=examen.id_cours,

@@ -6,7 +6,7 @@ class Create_cours(BaseModel):
     Prof_cours:str
     Salle_cours:str
     class Config:
-        from_attribute = True
+        from_attributes = True
 
 class Reponse_cours(BaseModel):
     Id_cours:int

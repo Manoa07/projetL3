@@ -6,6 +6,7 @@ import cv2
 from services.events import global_signals
 import httpx
 import asyncio
+from components.icon_loader import load_icon
 
 class AjoutEleveView(QWidget):
     def __init__(self):
@@ -24,17 +25,26 @@ class AjoutEleveView(QWidget):
         container.setStyleSheet("background-color: #0f111a;")
         layout = QVBoxLayout(container)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        layout.setContentsMargins(20, 5, 20, 5)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(18)
 
         # Titre
-        title = QLabel("<b style='color:#4facfe; font-size:20px;'>AJOUTER UN NOUVEL ÉLÈVE</b>")
+        title = QLabel("<b style='color:#f4f7fb; font-size:20px; letter-spacing: 1.4px;'>AJOUT ÉLÈVE</b>")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # 2. FORMULAIRE (Le cadre interne)
         form_frame = QFrame()
-        form_frame.setStyleSheet("background-color: #1a1c2e; border-radius: 15px; padding: 25px;")
-        # Stashed changes
+        form_frame.setObjectName("Card")
+        form_frame.setStyleSheet("""
+            QFrame#Card {
+                background-color: #151826;
+                border: 1px solid #23283d;
+                border-radius: 16px;
+            }
+        """)
         form_layout = QVBoxLayout(form_frame)
+        form_layout.setContentsMargins(22, 22, 22, 22)
+        form_layout.setSpacing(12)
 
         self.nom = self.create_input(form_layout, "Nom :")
         self.prenom = self.create_input(form_layout, "Prénom :")
@@ -43,36 +53,38 @@ class AjoutEleveView(QWidget):
 
 
        # --- SECTION PHOTO ---
-        form_layout.addSpacing(15)
-        form_layout.addWidget(QLabel("Photo d'identité (Portrait) :"))
+        form_layout.addSpacing(10)
+        photo_title = QLabel("Photo")
+        photo_title.setStyleSheet("color: #f4f7fb; font-weight: 700;")
+        form_layout.addWidget(photo_title)
         
         photo_section = QHBoxLayout()
-        # Stashed changes
         self.photo_label = QLabel("Format\nPortrait")
         self.photo_label.setFixedSize(150, 200) 
         self.photo_label.setStyleSheet("""
-            border: 2px dashed #2d2f41; 
-            border-radius: 10px; 
+            border: 1px dashed #335a7f; 
+            border-radius: 12px; 
             background-color: #0f111a;
-            color: #454859;
+            color: #586078;
         """)
         self.photo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
 
         # Correction du bouton : On augmente la largeur et on force la couleur blanche
-        self.btn_photo = QPushButton("📁 Charger la photo")
+        self.btn_photo = QPushButton("Charger")
+        self.btn_photo.setIcon(load_icon("course"))
         self.btn_photo.setMinimumSize(220, 50) # Utilisation de MinimumSize au lieu de FixedSize
         self.btn_photo.setStyleSheet("""
             QPushButton { 
-                background-color: #2d2f41; 
+                background-color: #20243a; 
                 color: #ffffff; 
-                border-radius: 8px; 
-                font-weight: bold;
+                border-radius: 12px; 
+                font-weight: 700;
                 font-size: 13px;
-                padding: 5px;
+                padding: 10px 14px;
             }
             QPushButton:hover { 
-                background-color: #3d405b; 
+                background-color: #2a304b; 
             }
         """)
         self.btn_photo.clicked.connect(self.upload_photo)
@@ -83,14 +95,14 @@ class AjoutEleveView(QWidget):
         photo_section.addStretch()
         form_layout.addLayout(photo_section)
         #Bouton capture image
-        self.btn_capture = QPushButton("📸 Capturer 10 photos")
+        self.btn_capture = QPushButton("Capturer 10")
         self.btn_capture.setStyleSheet("""
              QPushButton {
-            background-color: #3498db;
+            background-color: #4facfe;
             color: white;
             padding: 12px;
-            border-radius: 8px;
-            font-weight: bold;
+            border-radius: 12px;
+            font-weight: 700;
             }
         """)
         self.btn_capture.clicked.connect(self.start_capture)
@@ -100,7 +112,7 @@ class AjoutEleveView(QWidget):
         self.btn_submit = QPushButton("ENREGISTRER L'ÉLÈVE")
         self.btn_submit.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_submit.setStyleSheet("""
-            QPushButton { background-color: #2ecc71; color: white; font-weight: bold; padding: 18px; margin-top: 30px; border-radius: 10px; font-size: 14px; }
+            QPushButton { background-color: #2ecc71; color: white; font-weight: 700; padding: 18px; margin-top: 24px; border-radius: 12px; font-size: 14px; }
             QPushButton:hover { background-color: #27ae60; }
         """)
         self.btn_submit.clicked.connect(lambda: asyncio.create_task(self.envoyer_donnees()))
@@ -155,10 +167,24 @@ class AjoutEleveView(QWidget):
             print(f"Erreur : {e}")
 
     def create_input(self, layout, label_text):
-        layout.addWidget(QLabel(label_text))
+        label = QLabel(label_text)
+        label.setStyleSheet("color: #f4f7fb; font-weight: 600; margin-top: 4px;")
+        layout.addWidget(label)
         field = QLineEdit()
 
-        field.setStyleSheet("background-color: #0f111a; border: 1px solid #2d2f41; padding: 12px; border-radius: 5px; color: white; margin-bottom: 10px;")
+        field.setStyleSheet("""
+            QLineEdit {
+                background-color: #0f111a;
+                border: 1px solid #23283d;
+                padding: 12px;
+                border-radius: 10px;
+                color: white;
+                margin-bottom: 4px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #4facfe;
+            }
+        """)
 
         layout.addWidget(field)
         return field
@@ -172,10 +198,10 @@ class AjoutEleveView(QWidget):
             self.photo_label.setPixmap(pixmap.scaled(
                 self.photo_label.width(), 
                 self.photo_label.height(), 
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
+                Qt.AspectRatioMode.KeepAspectRatio, 
                 Qt.TransformationMode.SmoothTransformation
             ))
-            self.photo_label.setScaledContents(True)
+            self.photo_label.setScaledContents(False)
 
     def clear_fields(self):
         self.nom.clear()

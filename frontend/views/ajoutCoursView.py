@@ -2,16 +2,17 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLineEdit, QPushButton,
                              QLabel, QFrame, QMessageBox)
 from PyQt6.QtCore import Qt
 import requests
+from components.icon_loader import load_icon
 
 class AjoutCoursView(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(50, 50, 50, 50)
-        layout.setSpacing(20)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
 
         # Titre
-        title = QLabel("<h2 style='color: #4facfe;'>ENREGISTRER UN NOUVEAU COURS</h2>")
+        title = QLabel("<h2 style='color: #f4f7fb; letter-spacing: 1.4px;'>AJOUT COURS</h2>")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Formulaire
@@ -24,11 +25,12 @@ class AjoutCoursView(QWidget):
         layout.addWidget(self.input_salle)
 
         # Bouton de validation
-        btn_save = QPushButton("💾 ENREGISTRER LE COURS")
+        btn_save = QPushButton("ENREGISTRER LE COURS")
+        btn_save.setIcon(load_icon("course"))
         btn_save.setFixedSize(300, 50)
         btn_save.setStyleSheet("""
             QPushButton { 
-                background: #2ecc71; color: white; font-weight: bold; border-radius: 5px; 
+                background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; 
             }
             QPushButton:hover { background: #27ae60; }
         """)
@@ -42,8 +44,11 @@ class AjoutCoursView(QWidget):
         field.setFixedWidth(400)
         field.setStyleSheet("""
             QLineEdit { 
-                padding: 12px; border: 1px solid #2d2f41; 
-                border-radius: 5px; background: #24273d; color: white;
+                padding: 12px; border: 1px solid #23283d; 
+                border-radius: 10px; background: #151826; color: white;
+            }
+            QLineEdit:focus {
+                border: 1px solid #4facfe;
             }
         """)
         return field

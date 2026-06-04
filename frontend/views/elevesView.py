@@ -3,30 +3,36 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QTableWidget,QPushButt
 from PyQt6.QtCore import QTimer, Qt
 import httpx
 import asyncio
+from components.icon_loader import load_icon
+from components.theme import NAV_BUTTON_STYLE
 from services.events import global_signals # Importation du bus d'événements
 class ElevesView(QWidget):
     def __init__(self):
         
         super().__init__()
         layout = QVBoxLayout(self)
-        self.refresh_button = QPushButton("🔄 Rafraîchir")
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(14)
+        self.refresh_button = QPushButton("Rafraîchir")
+        self.refresh_button.setIcon(load_icon("chart"))
         self.refresh_button.setStyleSheet("""
             QPushButton {
                 background-color: #4facfe;
                 color: white;
-                padding: 6px;
-                border-radius: 5px;
+                padding: 10px 14px;
+                border-radius: 12px;
+                font-weight: 700;
                 }
             QPushButton:hover {
                 background-color: #3a8edb;
-                }
+            }
     """)
         self.refresh_button.clicked.connect(self.refresh_data)
 
         layout.addWidget(self.refresh_button)        
 
         # Titre de la section
-        self.title_label = QLabel("<b style='color:#4facfe; font-size:18px;'>LISTE DES ÉLÈVES - ISAIA L3</b>")
+        self.title_label = QLabel("<b style='color:#f4f7fb; font-size:18px; letter-spacing: 1.4px;'>ÉLÈVES</b>")
         layout.addWidget(self.title_label)
         
         # Configuration du tableau
@@ -34,16 +40,21 @@ class ElevesView(QWidget):
         self.table.setHorizontalHeaderLabels(["N°", "Nom et Prénoms", "Classe"])
         self.table.setStyleSheet("""
             QTableWidget {
-                background-color: #1a1c2e; 
+                background-color: #151826;
                 color: white;
-                gridline-color: #2d2f41;
-                border: none;
+                gridline-color: #23283d;
+                border: 1px solid #23283d;
+                border-radius: 14px;
             }
             QHeaderView::section {
-                background-color: #24273d;
+                background-color: #1a1f2f;
                 color: #4facfe;
-                padding: 5px;
-                border: 1px solid #2d2f41;
+                padding: 10px;
+                border: 1px solid #23283d;
+                font-weight: 700;
+            }
+            QTableWidget::item {
+                padding: 8px;
             }
         """)
 
@@ -100,4 +111,3 @@ class ElevesView(QWidget):
             self.table.setItem(i, 2, QTableWidgetItem(e.get("Classe_eleve", "")))
             
         print(f"Tableau mis à jour : {len(eleves)} élèves affichés.")
-

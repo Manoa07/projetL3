@@ -1,52 +1,71 @@
-#Systeme de Surveillance Video Intelligent et de presence
+# Système de surveillance vidéo intelligent et de présence
 
-#installation opencv 
-#pip install opencv-contrib-python  
-#pip install opencv-python mediapipe
-#pip install opencv-python mtcnn keras-facenet 
+Projet composé de deux parties:
+- `Backend`: API FastAPI pour les élèves, cours, présence, examen, surveillance et caméra.
+- `frontend`: application PyQt6 pour l'interface de supervision et de pointage.
 
+## Prérequis
 
-#Frontend:
-# **environnement de devellopement**
+- Python 3.10+ recommandé
+- PostgreSQL
+- Les dépendances Python du backend et du frontend
+
+## Installation
+
+### Backend
+
+```bash
+cd Backend/app
+pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic
 ```
-    pip install PyQt6
-#Backend:
-    -recquis : Sqlalchemy ,pydantic ,fastapi , python, postgresql , postman
-        .commande : #pip install fastapi
-                    #pip install sqlalchemy
-                    #pip install psycopg2-binary
-                    #pip install pydantic
-    -optionnel: pgadmin
-    -lancer backend : uvicorn main:app --reload
-                    ny base de donnée dia créer automatiquement rehefa lancé io. Postgresql necessaire.
-    Version 0.1 : Ajout eleve fonctionnel , Appelle eleve par id fonctionnel , Appelle List eleve foncionnelle
-    pour frontend : route fonctionnelle  "route_eleve".
-    Version 0.2 : route cours , eleve , presence fonctionnel . cd 
-                -requete possible : * Ajout eleve fonctionnel ,
-                                    * Appelle eleve par id fonctionnel , 
-                                    * Appelle List eleve,
-                                    * Creer cours
-                                    * get list cours
-                                    * creer presence
-                                    * afficher list presence specifique d'un eleve(date/heure/status)
-                                    * afficher derniere presence d'un eleve (date/heure/status)
-    Version 0.3 : route ajouter et fonctionnel :
-                            -route examen:
-                                    .ajoute examen
-                                    .afficher examen par cours
-                                    
-                            -route surveillance:
-                                    .Creer une surveillance
-                                    .Voir surveillance sur un eleve precis (id)
-                            -route camera:
-                                    .Creer une capture
-                                    .stocker un ficher(non fonctionnel):string
 
+### Frontend
 
-#Posture detectable
+```bash
+cd frontend
+pip install PyQt6 qasync requests opencv-python mediapipe mtcnn keras-facenet numpy
+```
 
- Poignets proches des épaules : Les poignets sont détectés trop proches des épaules, ce qui peut indiquer une posture suspecte.
+## Configuration
 
-Inclinaison excessive du torse : Le torse est incliné de manière excessive, détecté par la proximité des épaules et des hanches.
+Le backend utilise la variable `DATABASE_URL` définie dans [Backend/app/DB/database.py](/home/manoa/Bureau/projetL3/Backend/app/DB/database.py).
+Vérifie que l'URL PostgreSQL correspond à ton environnement local.
 
-Croisement des bras : Les poignets sont détectés proches l'un de l'autre, ce qui peut indiquer un croisement des bras 
+Les fichiers téléversés pour les élèves sont enregistrés dans:
+- `Backend/app/upload/eleve_upload`
+
+## Lancement
+
+### Backend
+
+Depuis `Backend/app`:
+
+```bash
+uvicorn main:app --reload
+```
+
+### Frontend
+
+Depuis `frontend`:
+
+```bash
+python main.py
+```
+
+## Structure
+
+- `Backend/app/main.py`: point d'entrée FastAPI
+- `Backend/app/routes`: routes HTTP
+- `Backend/app/services`: logique métier
+- `Backend/app/models`: modèles SQLAlchemy
+- `Backend/app/schema`: schémas Pydantic
+- `frontend/main.py`: point d'entrée PyQt6
+- `frontend/interface`: écrans principaux
+- `frontend/views`: vues secondaires
+- `frontend/services`: threads et services réseau
+
+## Remarques de cohérence
+
+- Les imports backend sont écrits pour être exécutés depuis `Backend/app`.
+- `frontend/services/presenceTheard.py` conserve l'ancien nom pour compatibilité, mais expose maintenant `PresenceThread`.
+- Les schémas Pydantic ont été normalisés sur `from_attributes=True`.

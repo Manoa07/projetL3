@@ -3,17 +3,18 @@ import pickle
 import shutil
 from sqlite3 import IntegrityError
 from uuid import uuid4
+from pathlib import Path
 import cv2
 from fastapi import HTTPException
 import numpy as np
 from models.eleve import Eleve
-import os
 from sqlalchemy import and_
 from mtcnn import MTCNN
 from keras_facenet import FaceNet
 detector=MTCNN()
 embedder=FaceNet()
-UPLOAD_DIR="upload/eleve_upload"
+BASE_DIR = Path(__file__).resolve().parent.parent
+UPLOAD_DIR = BASE_DIR / "upload" / "eleve_upload"
 
 def create_eleve(eleve,photo,images,db):
     print("FILES REÇUS :", images)
@@ -48,8 +49,8 @@ def create_eleve(eleve,photo,images,db):
     finale_embedding = np.mean(embedding, axis=0)
     
     Filename=f"{uuid4()}_{photo.filename}"
-    file_path=os.path.join(UPLOAD_DIR,Filename)
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    file_path=UPLOAD_DIR / Filename
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     with open(file_path,"wb") as upload:
         shutil.copyfileobj(photo.file, upload)
 
@@ -60,7 +61,7 @@ def create_eleve(eleve,photo,images,db):
             Prenom_eleve= eleve.Prenom_eleve,
             Classe_eleve= eleve.Classe_eleve,
             Numero_eleve= eleve.Numero_eleve,
-            photo_eleve=file_path,
+            photo_eleve=str(file_path),
             embedding=pickle.dumps(finale_embedding)
             )
         try:

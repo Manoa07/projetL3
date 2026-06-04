@@ -8,7 +8,7 @@ import time
 
 
 
-class presenceTheard(QThread):
+class PresenceThread(QThread):
     change_pixmap_signal = pyqtSignal(QImage)
     student_detected_signal=pyqtSignal(str)
     
@@ -65,3 +65,7 @@ class presenceTheard(QThread):
     def stop(self):
         self._run_flag = False
         self.wait()
+
+
+# Compatibilité avec l'ancien nom mal orthographié utilisé dans l'interface.
+presenceTheard = PresenceThread

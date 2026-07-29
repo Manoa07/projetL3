@@ -1,4 +1,4 @@
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy import and_
 from models.cours import Cours
@@ -6,15 +6,19 @@ from models.cours import Cours
 
 def create_cours(cours,db):
     cours_verifie=db.query(Cours).filter(
-        and_(Cours.Nom_cours==cours.Nom_cours,
-             Cours.Professeur_cours==cours.Prof_cours
-             )
+        and_(Cours.nom_cours == cours.nom_cours,
+             Cours.date_cours == cours.date_cours,
+             Cours.id_professeur_professeur == cours.id_professeur_professeur)
         ).first()
     if not cours_verifie:
         new_cours = Cours(
-            Nom_cours = cours.Nom_cours,
-            Professeur_cours= cours.Prof_cours,
-            Salle_cours=cours.Salle_cours
+            Nom_cours = cours.nom_cours,
+            date_cours = cours.date_cours,
+            heure_debut_cours = cours.heure_debut_cours,
+            heure_fin_cours = cours.heure_fin_cours,
+            id_professeur_professeur = cours.id_professeur_professeur,
+            id_salle_salle = cours.id_salle_salle,
+            id_matiere_matiere = cours.id_matiere_matiere
            )
         try:
             db.add(new_cours)
@@ -23,11 +27,9 @@ def create_cours(cours,db):
         except IntegrityError as e:
             print(e)
         return new_cours
-    else :
-        raise HTTPException(
-            status_code=201,
-            detail="cours creer"
-        )
+    else:
+        # Cours déjà existant → retourner les infos existantes
+        return cours_verifie
 def get_cours(db):
     cours_verifie = db.query(Cours).all()
     if not cours_verifie:
@@ -37,4 +39,3 @@ def get_cours(db):
         )
 
     return cours_verifie
-

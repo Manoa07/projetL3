@@ -10,6 +10,6 @@ router= APIRouter(prefix="/examen",tags=["Examen"])
 def create_examen_route(examen : Create_examen , db : db_dependancy):
     return create_examen(examen , db)
 
-@router.get("/cours/{id_cours}", response_model=List[Voir_examens])
-def get_examen_route(id_cours:int,db:db_dependancy):
-    return get_examen(id_cours,db)
+@router.get("/all", response_model=List[Voir_examens])
+def get_examen_route(db:db_dependancy):
+    return get_examen(db)

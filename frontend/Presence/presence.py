@@ -1,29 +1,22 @@
-import json
 import cv2
 import numpy as np
 from mtcnn import MTCNN
 from datetime import datetime, timedelta
-import pickle 
-from  keras_facenet import FaceNet
-import sqlite3
+import pickle
+from keras_facenet import FaceNet
 import requests
 class SystemePresence:
     """
-    Système de présence par reconnaissance faciale avec base SQLite.
+    Système de présence par reconnaissance faciale utilisant l'API PostgreSQL.
     """
-    def __init__(self, seuil_distance=0.8, db_path='presence.db'):
+    def __init__(self, seuil_distance=0.8):
         """
         Initialise les modèles et la connexion à la base.
 
         Args:
             seuil_distance (float): Seuil de distance pour considérer une correspondance.
-            db_path (str): Chemin vers le fichier SQLite.
         """
         self.seuil = seuil_distance
-        self.db_path = db_path
-        # Connexion à la base
-        self.conn = self.connect_db()
-        self.creer_tables()
         self.detector = MTCNN()
         # Modèle d'embedding
         print("Chargement du modèle FaceNet (keras-facenet)...")
@@ -85,14 +78,13 @@ class SystemePresence:
     def enregistrer_presence_db(self, id_eleve, nom_complet):
 
         maintenant = datetime.now()
-        date_auj = maintenant.date().isoformat()
-        heure_act = maintenant.time().isoformat()
 
         data={
-            "id_eleve":id_eleve,
-            "date_presence":maintenant.date().isoformat(),
-            "heure_presence":maintenant.time().isoformat(),
-            "status":"present"
+            "id_eleve": id_eleve,
+            "id_cours": 1,
+            "Date_presence": maintenant.date().isoformat(),
+            "Heure_presence": maintenant.time().isoformat(),
+            "Status_presence": "present"
         }
         try:
             reponse=requests.post(
@@ -100,7 +92,7 @@ class SystemePresence:
                 json=data
             )
             if reponse.status_code==200:
-                print(f"Presence enregistrée pour {nom_complet}")
+                print(f"Présence enregistrée pour {nom_complet}")
             else:
                 print("Erreur API : ",reponse.text)
         except Exception as e:
@@ -186,16 +178,16 @@ class SystemePresence:
 
         emb_moyen = np.mean(embeddings, axis=0)
 
-        _,buffer=cv2.imencode(".jpg",images_visage[0])
-        files={
-            "photo":("photo.jpg",buffer.tobytes(),"image/jpeg")
+        _, buffer = cv2.imencode(".jpg", images_visages[0])
+        files = {
+            "photo": ("photo.jpg", buffer.tobytes(), "image/jpeg")
         }
         data = {
             "Nom_eleve": nom,
             "Prenom_eleve": prenom,
             "Classe_eleve": classe,
             "Numero_eleve": numero,
-            "embedding":emb_moyen.tolist()
+            "embedding": emb_moyen.tolist()
         }
         try:
             response = requests.post(
@@ -252,11 +244,11 @@ if __name__ == "__main__":
         nom = input("Nom de l'élève : ")
         prenom = input("Prénom de l'élève : ")
         classe=input("Classe de l'élève : ")
-        numero=input("Numero d l'eleve")
+        numero=int(input("Numero de l'élève : "))
         print("Préparez-vous à être photographié.")
-        images_visage = capturer_images_visage(systeme.detector, nb_images=10)
-        if len(images_visage) >= 3:
-            systeme.ajouter_eleve(nom,prenom,classe,numero,images_visage)
+        images_visages = capturer_images_visage(systeme.detector, nb_images=10)
+        if len(images_visages) >= 3:
+            systeme.ajouter_eleve(nom, prenom, classe, numero, images_visages)
         else:
             print("Pas assez d'images valides.")
     elif choix == "2":

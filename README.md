@@ -6,7 +6,7 @@ Projet composé de deux parties:
 
 ## Prérequis
 
-- Python 3.10+ recommandé
+- Python 3.12 recommandé (TensorFlow n'est pas disponible avec Python 3.14)
 - PostgreSQL
 - Les dépendances Python du backend et du frontend
 
@@ -16,7 +16,7 @@ Projet composé de deux parties:
 
 ```bash
 cd Backend/app
-pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic
+../../.venv/bin/python3.12 -m pip install -r ../../requirements.txt
 ```
 
 ### Frontend
@@ -28,8 +28,14 @@ pip install PyQt6 qasync requests opencv-python mediapipe mtcnn keras-facenet nu
 
 ## Configuration
 
-Le backend utilise la variable `DATABASE_URL` définie dans [Backend/app/DB/database.py](/home/manoa/Bureau/projetL3/Backend/app/DB/database.py).
-Vérifie que l'URL PostgreSQL correspond à ton environnement local.
+Le backend utilise exclusivement PostgreSQL. Définis obligatoirement la variable
+`DATABASE_URL` avant le lancement, par exemple:
+
+```bash
+export DATABASE_URL="postgresql+psycopg2://utilisateur:mot_de_passe@localhost:5432/surveillance"
+```
+
+Toute URL qui n'utilise pas PostgreSQL est refusée par le backend.
 
 Les fichiers téléversés pour les élèves sont enregistrés dans:
 - `Backend/app/upload/eleve_upload`
@@ -41,7 +47,7 @@ Les fichiers téléversés pour les élèves sont enregistrés dans:
 Depuis `Backend/app`:
 
 ```bash
-uvicorn main:app --reload
+../../.venv/bin/python3.12 -m uvicorn main:app --reload
 ```
 
 ### Frontend

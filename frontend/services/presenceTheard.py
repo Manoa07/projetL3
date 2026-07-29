@@ -19,12 +19,31 @@ class PresenceThread(QThread):
 
     def run(self):
         cap = cv2.VideoCapture(0)
+        # Limiter le FPS pour réduire la charge CPU
+        frame_interval = 0.15  # ~6-7 FPS
+        last_time = time.time()
+
         while self._run_flag:
             ret, frame = cap.read()
             
             if not ret:
-                continue     
-            print("frame ok")       
+                continue
+
+            current_time = time.time()
+            if current_time - last_time < frame_interval:
+                # Envoyer quand même l'image actuelle sans traitement API
+                try:
+                    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    h, w, ch = rgb_image.shape
+                    bytes_per_line = ch * w
+                    qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+                    self.change_pixmap_signal.emit(qt_image)
+                except Exception as e:
+                    print(e)
+                continue
+
+            last_time = current_time
+
             _,buffer = cv2.imencode('.jpg',frame)
             try:
                 reponse=requests.post(
@@ -40,8 +59,9 @@ class PresenceThread(QThread):
                     w = face.get("w", 0)
                     h = face.get("h", 0)
                     nom = face.get("nom", "Inconnu")
+                    status = face.get("status", "")
 
-                    if nom != "Inconnu":
+                    if status == "present":
                         color = (0, 255, 0)
                     else:
                         color = (0, 0, 255)
@@ -49,8 +69,12 @@ class PresenceThread(QThread):
                     cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
                     cv2.putText(frame, nom, (x, y-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+                    if nom != "Inconnu":
+                        self.student_detected_signal.emit(nom)
             except Exception as e:
                 print("Erreur API ",e)
+
             try:
                 rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 h, w, ch = rgb_image.shape

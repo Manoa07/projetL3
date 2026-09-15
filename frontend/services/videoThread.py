@@ -20,11 +20,12 @@ class VideoThread(QThread):
         self.cap = None  # Initialisation de l'attribut pour éviter l'AttributeError
 
     def run(self):
-        # Initialisation du landmarker
+        # Initialisation du landmarker (BUG-02 : instance unique ici, pas au niveau module)
         landmarker = PoseLandmarker.create_from_options(options)
         
-        # Assignation à self.cap pour qu'il soit accessible par stop()
         self.cap = cv2.VideoCapture(self.camera_index)
+        # BUG-03 : timestamp relatif au démarrage du thread (MediaPipe VIDEO exige monotonique depuis 0)
+        start_ms = int(time.time() * 1000)
 
         try:
             while self._run_flag:
@@ -33,7 +34,7 @@ class VideoThread(QThread):
                     break
 
                 # 1. Préparation de l'image pour MediaPipe
-                timestamp = int(time.time() * 1000)
+                timestamp = int(time.time() * 1000) - start_ms + 1  # toujours > 0 et croissant
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
                 

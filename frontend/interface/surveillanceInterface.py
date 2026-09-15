@@ -20,9 +20,9 @@ from components.alertCard import AlertCard
 
 class SurveillanceInterface(QWidget):
     def __init__(self, back_to_home_callback):
+        super().__init__()
         self.last_alert_time = 0
         self.alert_cooldown = 5
-        super().__init__()
         self.back_to_home = back_to_home_callback
         self.live_view = None 
         
@@ -33,7 +33,7 @@ class SurveillanceInterface(QWidget):
         # --- A. BARRE LATÉRALE ---
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
-        self.sidebar.setFixedWidth(108)
+        self.sidebar.setFixedWidth(140)
         self.sidebar.setStyleSheet("""
             QFrame#Sidebar {
                 background-color: #151826;
@@ -127,7 +127,7 @@ class SurveillanceInterface(QWidget):
         btn = QPushButton(text)
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
-        btn.setFixedSize(100, 86)
+        btn.setFixedSize(120, 86)
         btn.setIcon(icon)
         btn.setIconSize(QSize(24, 24))
         btn.setStyleSheet(NAV_BUTTON_STYLE)

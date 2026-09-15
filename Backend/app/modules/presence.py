@@ -1,34 +1,31 @@
+import time
 import cv2
 import numpy as np
-from mtcnn import MTCNN
 from datetime import datetime, timedelta
 import pickle
-from keras_facenet import FaceNet
 from services.presence_service import create_presence
-from services.eleve_service import get_eleve
-from models.presence import Presence
+from services.eleve_service import get_eleve, _get_detector, _get_embedder
+from models.presence import Presence  # encore utilisé pour la requête eleves_deja_presents
 
-# Singleton : MTCNN et FaceNet chargés UNE SEULE FOIS au niveau du module
+# Singleton : MTCNN et FaceNet partagés avec eleve_service (WARN-05)
 _detector = None
 _embedder = None
 
-
-def _get_detector():
-    global _detector
-    if _detector is None:
-        print("[Presence] Chargement de MTCNN...")
-        _detector = MTCNN()
-        print("[Presence] MTCNN chargé.")
-    return _detector
+# Cache en mémoire des embeddings pour éviter les requêtes DB à chaque frame
+_cached_eleves_base = None
+_cached_time = 0.0
+_CACHE_TTL = 15.0  # secondes
 
 
-def _get_embedder():
-    global _embedder
-    if _embedder is None:
-        print("[Presence] Chargement de FaceNet...")
-        _embedder = FaceNet()
-        print("[Presence] FaceNet chargé.")
-    return _embedder
+
+def _get_detector_local():
+    """Délègue au singleton de eleve_service pour éviter le double chargement."""
+    return _get_detector()
+
+
+def _get_embedder_local():
+    """Délègue au singleton de eleve_service pour éviter le double chargement."""
+    return _get_embedder()
 
 
 class SystemePresence:
@@ -37,8 +34,8 @@ class SystemePresence:
         self.db = db
         self.id_cours = id_cours
         self.seuil = seuil_distance
-        self.detector = _get_detector()
-        self.embedder = _get_embedder()
+        self.detector = _get_detector_local()
+        self.embedder = _get_embedder_local()
         self.base_visages = self.charger_base()
         self.dernier_enregistrement = {}
         # Un scan crée une nouvelle instance pour chaque image reçue par
@@ -57,25 +54,36 @@ class SystemePresence:
 
 
     def charger_base(self):
-        eleves=get_eleve(self.db)
-        base={}
+        global _cached_eleves_base, _cached_time
+        now = time.time()
+        if _cached_eleves_base is not None and (now - _cached_time < _CACHE_TTL):
+            return {
+                nom: (id_e, c_e, self.id_cours, emb)
+                for nom, (id_e, c_e, _, emb) in _cached_eleves_base.items()
+            }
+
+        eleves = get_eleve(self.db)
+        base = {}
         for eleve in eleves:
             nom_complet = f"{eleve['Nom_eleve']} {eleve['Prenom_eleve']}"
-            embedding=eleve['embedding']
+            embedding = eleve['embedding']
             if embedding is None:
                 continue
-            if isinstance(embedding,bytes):
+            if isinstance(embedding, bytes):
                 try:
-                    embedding=pickle.loads(embedding)
+                    embedding = pickle.loads(embedding)
                 except Exception as e:
                     print("Erreur dans pickle : ", e)
                     continue
             try:
-                embedding=np.array(embedding, dtype=np.float32)
+                embedding = np.array(embedding, dtype=np.float32)
             except Exception as e:
-                print("Erreur conversion numpy : ",e)
+                print("Erreur conversion numpy : ", e)
                 continue
-            base[nom_complet]=(eleve['Id_eleve'],eleve['Classe_eleve'],self.id_cours,embedding)
+            base[nom_complet] = (eleve['Id_eleve'], eleve['Classe_eleve'], self.id_cours, embedding)
+
+        _cached_eleves_base = base
+        _cached_time = now
         return base
 
     def obtenir_embedding(self, image_visage):
@@ -109,15 +117,18 @@ class SystemePresence:
             return None, None, None ,None,None
 
     def enregistrer_presence_db(self, Id_eleve, Id_cours, Classe_eleve):
+        """BUG-05 : on passe un schéma Pydantic Create_presence, pas un objet ORM."""
+        from schema.sch_presence import Create_presence
+        import datetime as dt
 
-        maintenant = datetime.now()
+        maintenant = dt.datetime.now()
 
-        data = Presence(
+        data = Create_presence(
             id_eleve=Id_eleve,
             id_cours=Id_cours,
             Date_presence=maintenant.date(),
-            Heure_presence=maintenant.time(),
-            Status_presence="present"
+            Heure_presence=maintenant.time().replace(microsecond=0),
+            Status_presence="present",
         )
 
         try:

@@ -1,6 +1,6 @@
 from DB.database import Base
 from sqlalchemy import Integer, Column,String,Date,Time,ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 
 class Cours(Base):
     __tablename__= 'cours'
@@ -18,3 +18,7 @@ class Cours(Base):
     id_matiere_matiere=Column(Integer, ForeignKey("matiere.id_matiere"), nullable=True)
     presence =relationship("Presence",back_populates="cours")
     examen=relationship("Examen",back_populates="cours")
+
+    id_cours = synonym("Id_cours")
+    nom_cours = synonym("Nom_cours")
+

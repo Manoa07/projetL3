@@ -26,14 +26,9 @@ def create_surveillance(surveillance,db):
             print(e)
     else:
         raise HTTPException(
-            status_code=401,
-            detail="Surveillance deja existant"
+            status_code=409,   # BUG-09 : 409 Conflict, pas 401 Unauthorized
+            detail="Surveillance déjà existante"
         )
-def voir_eleve(id_eleve,db):
-    eleve_verifie=db.query(Surveillance).filter(Surveillance.id_eleve==id_eleve).all()
-    if not eleve_verifie:
-        raise HTTPException(
-            status_code=404,
-            detail="non trouvé"
-        )
-    return eleve_verifie
+def voir_eleve(id_eleve, db):
+    eleve_verifie = db.query(Surveillance).filter(Surveillance.id_eleve == id_eleve).all()
+    return eleve_verifie  # retourne [] si vide

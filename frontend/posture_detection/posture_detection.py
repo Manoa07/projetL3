@@ -102,22 +102,9 @@ _debug_log(
     },
 )
 
-try:
-    _debug_log(
-        "H1",
-        "posture_detection.py:module:pose_init",
-        "Creating PoseLandmarker",
-        {"running_mode": str(options.running_mode)},
-    )
-    pose_landmarker = PoseLandmarker.create_from_options(options)
-except Exception as e:
-    _debug_log(
-        "H1",
-        "posture_detection.py:module:pose_init:exception",
-        "PoseLandmarker init failed",
-        {"type": type(e).__name__, "error": str(e)},
-    )
-    raise
+# BUG-02 : L'instance PoseLandmarker est créée dans VideoThread.run() et dans main().
+# On ne crée plus d'instance globale ici pour éviter le double chargement en mémoire.
+# La fonction main() crée sa propre instance locale.
 
 def _l1_dist(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
@@ -200,6 +187,16 @@ def detect_phone(points):
 
 last_sent = {}
 
+# WARN-03 : id_examen courant, mis à jour par l'interface avant le lancement
+current_examen_id: int = 1
+
+
+def set_current_examen(id_examen: int):
+    """Appelé par l'interface pour définir l'examen en cours de surveillance."""
+    global current_examen_id
+    current_examen_id = id_examen
+
+
 def send_alert_to_api(id_eleve, remarque):
     key = f"{id_eleve}-{remarque}"
     now = time.time()
@@ -208,15 +205,15 @@ def send_alert_to_api(id_eleve, remarque):
     last_sent[key] = now
     try:
         data = {
-            "id_examen": 1,
-            "id_eleve": id_eleve,
+            "id_examen":    current_examen_id,   # WARN-03 : valeur dynamique
+            "id_eleve":     id_eleve,
             "Status_examen": "suspect",
-            "Remarque": remarque
+            "Remarque":     remarque,
         }
         requests.post(
             "http://127.0.0.1:8000/surveillance/create",
             json=data,
-            timeout=2
+            timeout=2,
         )
     except Exception as e:
         print("Erreur API :", e)
@@ -237,6 +234,9 @@ def main():
         },
     )
 
+    # BUG-02 : instance locale à main(), indépendante de VideoThread
+    pose_landmarker = PoseLandmarker.create_from_options(options)
+
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -244,7 +244,8 @@ def main():
     if not fps or fps <= 1:
         fps = 30.0
     frame_idx = 0
-    start_time = time.time()
+    # BUG-03 : timestamp relatif au démarrage (MediaPipe VIDEO exige croissance depuis 0)
+    start_ms = int(time.time() * 1000)
     last_timestamp_ms = -1
 
     while cap.isOpened():
@@ -258,7 +259,7 @@ def main():
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
         computed_ms = int((frame_idx * 1000.0) / fps)
-        wall_ms = int((time.time() - start_time) * 1000.0)
+        wall_ms = int(time.time() * 1000) - start_ms
         timestamp_ms = computed_ms if computed_ms > 0 else wall_ms
         if timestamp_ms <= last_timestamp_ms:
             timestamp_ms = last_timestamp_ms + 1

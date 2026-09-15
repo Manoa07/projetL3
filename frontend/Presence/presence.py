@@ -31,17 +31,20 @@ class SystemePresence:
     def charger_base(self):
         """Charge les embeddings depuis la base pour la comparaison rapide."""
         try:
-            reponse=requests.get("http://localhost:8000/eleve/all")
-            eleves=reponse.json()
-            base={}
+            reponse = requests.get("http://localhost:8000/eleve/all")
+            eleves = reponse.json()
+            base = {}
             for eleve in eleves:
                 nom_complet = f"{eleve['Nom_eleve']} {eleve['Prenom_eleve']} "
-                embedding=np.array(eleve["embedding"])
-                base[nom_complet]=(eleve["Numero_eleve"],embedding)
+                # BUG-13 : ignorer les élèves sans embedding pour éviter crash numpy
+                if eleve.get("embedding") is None:
+                    continue
+                embedding = np.array(eleve["embedding"])
+                base[nom_complet] = (eleve["Numero_eleve"], embedding)
             return base
         except Exception as e:
             print(e)
-            return{}
+            return {}
 
         
 

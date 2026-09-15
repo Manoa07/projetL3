@@ -15,6 +15,7 @@ sqlalchemy
 psycopg2-binary
 pydantic
 python-multipart
+python-dotenv
 
 # ---- Backend & Frontend : vision par ordinateur -----------------------------
 opencv-python

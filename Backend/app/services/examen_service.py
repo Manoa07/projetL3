@@ -3,11 +3,11 @@ from fastapi import HTTPException
 from sqlalchemy import and_
 from models.examen import Examen
 
-def create_examen(examen,db):
-    examen_verifie=db.query(Examen).filter(
+def create_examen(examen, db):
+    examen_verifie = db.query(Examen).filter(
         and_(
-            Examen.date_examen==examen.date_examen,
             Examen.date_examen == examen.date_examen,
+            Examen.Heure_debut == examen.heure_debut,   # BUG-07 : vérifier aussi l'heure
             Examen.id_salle_salle == examen.id_salle_salle,
             Examen.id_matiere_matiere == examen.id_matiere_matiere
         )
@@ -34,11 +34,6 @@ def create_examen(examen,db):
             detail="examen existant"
         )
 def get_examen(db):
-    examen_verifie=db.query(Examen).all()
-    if not examen_verifie:
-        raise HTTPException(
-            status_code=404,
-            detail="examen non trouvé"
-        )
-    return examen_verifie
+    examen_verifie = db.query(Examen).all()
+    return examen_verifie  # retourne [] si vide
     

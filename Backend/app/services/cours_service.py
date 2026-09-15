@@ -6,7 +6,7 @@ from models.cours import Cours
 
 def create_cours(cours,db):
     cours_verifie=db.query(Cours).filter(
-        and_(Cours.nom_cours == cours.nom_cours,
+        and_(Cours.Nom_cours == cours.nom_cours,
              Cours.date_cours == cours.date_cours,
              Cours.id_professeur_professeur == cours.id_professeur_professeur)
         ).first()

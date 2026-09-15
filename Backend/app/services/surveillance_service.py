@@ -25,8 +25,11 @@ def create_surveillance(surveillance,db):
         except IntegrityError as e:
             print(e)
     else:
+        # Correction : 401 (Unauthorized) était sémantiquement incorrect.
+        # 409 (Conflict) est le bon code quand la ressource existe déjà,
+        # cohérent avec presence_service.py et eleve_service.py.
         raise HTTPException(
-            status_code=401,
+            status_code=409,
             detail="Surveillance deja existant"
         )
 def voir_eleve(id_eleve,db):

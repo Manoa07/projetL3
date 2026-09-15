@@ -17,17 +17,13 @@ data/
 .vscode/
 Backend/.vscode/
 frontend/.vscode/
-<<<<<<< Updated upstream
 /Backend/upload/**
 .python-version
 *.log
 *.sql
 
-=======
-
 # Local environment
 .env
 !.env.example
->>>>>>> Stashed changes
 
 

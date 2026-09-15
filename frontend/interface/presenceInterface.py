@@ -155,12 +155,12 @@ class PresenceInterface(QWidget):
         self.load_cours()
 
     def start_presence_camera(self):
-        #selection cours
+        """Active la caméra et lance le VideoThread pour le traitement."""
+        # Sélection du cours
         self.selected_cours_id = self.cours_select.currentData()
         if not self.selected_cours_id:
             print("Aucun cours sélectionné")
             return
-        """Active la caméra et lance le VideoThread pour le traitement"""
         self.cam_scroll = QScrollArea()
         self.cam_scroll.setWidgetResizable(True)
         self.cam_scroll.setStyleSheet("background: transparent; border: none;")

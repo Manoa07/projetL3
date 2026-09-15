@@ -10,17 +10,17 @@ venv/
 .venv/
 postman/
 __pycache__/
-*.sql
 *.db
 *.sqlite
 *.sqlite3
 data/
-*.log
 .vscode/
 Backend/.vscode/
 frontend/.vscode/
 /Backend/upload/**
-
+.python-version
+*.log
+*.sql
 
 
 

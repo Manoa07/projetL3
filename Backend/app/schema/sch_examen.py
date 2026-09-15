@@ -5,16 +5,18 @@ class Create_examen(BaseModel):
     date_examen:date
     heure_debut:time
     heure_fin:time
-    salle_examen:str
-    id_cours:int
+    semestre_examen: str
+    id_salle_salle: int
+    id_matiere_matiere: int
     class Config:
         from_attributes=True
 
 class Voir_examens(BaseModel):
-    id_cours:int
     date_examen:date
     Heure_debut:time
     Heure_fin:time
-    Salle_examen:str
+    semestre_examen: str | None = None
+    id_salle_salle: int | None = None
+    id_matiere_matiere: int | None = None
     class Config:
         from_attributes=True

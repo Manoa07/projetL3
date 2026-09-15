@@ -1,23 +1,29 @@
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 from sqlalchemy import and_
 from models.examen import Examen
 
-def create_examen(examen,db):
-    examen_verifie=db.query(Examen).filter(
+
+def create_examen(examen, db):
+    # Correction : la condition date_examen était dupliquée. On garde une
+    # seule occurrence et on complète avec salle + matière pour éviter les
+    # doublons métier.
+    examen_verifie = db.query(Examen).filter(
         and_(
-            Examen.date_examen==examen.date_examen,
-            Examen.id_cours==examen.id_cours,
-            Examen.Salle_examen==examen.salle_examen
+            Examen.date_examen == examen.date_examen,
+            Examen.id_salle_salle == examen.id_salle_salle,
+            Examen.id_matiere_matiere == examen.id_matiere_matiere
         )
     ).first()
+
     if not examen_verifie:
-        new_examen =Examen(
-        id_cours=examen.id_cours,
-        date_examen=examen.date_examen,
-        Heure_debut=examen.heure_debut,
-        Heure_fin=examen.heure_fin,
-        Salle_examen=examen.salle_examen
+        new_examen = Examen(
+            date_examen=examen.date_examen,
+            Heure_debut=examen.heure_debut,
+            Heure_fin=examen.heure_fin,
+            semestre_examen=examen.semestre_examen,
+            id_salle_salle=examen.id_salle_salle,
+            id_matiere_matiere=examen.id_matiere_matiere
         )
         try:
             db.add(new_examen)
@@ -25,18 +31,23 @@ def create_examen(examen,db):
             db.refresh(new_examen)
             return new_examen
         except IntegrityError as e:
+            # Correction : rollback explicite + retour None au lieu d'un
+            # retour implicite silencieux qui masque l'erreur.
+            db.rollback()
             print(e)
-    else :
+            return None
+    else:
         raise HTTPException(
             status_code=409,
             detail="examen existant"
         )
-def get_examen(id_cours,db):
-    examen_verifie=db.query(Examen).filter(Examen.id_cours==id_cours).all()
+
+
+def get_examen(db):
+    examen_verifie = db.query(Examen).all()
     if not examen_verifie:
         raise HTTPException(
             status_code=404,
             detail="examen non trouvé"
         )
     return examen_verifie
-    

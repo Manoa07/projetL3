@@ -4,4 +4,4 @@ class Stocker_camera(BaseModel):
     id_surveillance:int
     fichier_capture:str
     class Config:
-        from_attribute=True
+        from_attributes=True

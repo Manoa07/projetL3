@@ -20,9 +20,11 @@ from components.alertCard import AlertCard
 
 class SurveillanceInterface(QWidget):
     def __init__(self, back_to_home_callback):
+        # Correction : super().__init__() doit être appelé en premier pour que
+        # l'objet Qt C++ soit initialisé avant toute affectation d'attributs.
+        super().__init__()
         self.last_alert_time = 0
         self.alert_cooldown = 5
-        super().__init__()
         self.back_to_home = back_to_home_callback
         self.live_view = None 
         

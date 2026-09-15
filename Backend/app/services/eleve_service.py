@@ -1,7 +1,7 @@
 import json
 import pickle
 import shutil
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from uuid import uuid4
 from pathlib import Path
 import cv2

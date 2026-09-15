@@ -17,13 +17,18 @@ from components.cameraView import CameraView
 from views.elevesView import ElevesView
 from views.ajoutEleveView import AjoutEleveView
 from views.ajoutCoursView import AjoutCoursView
+from views.ajoutExamenView import AjoutExamenView
+from views.gestionReferentielsView import GestionReferentielsView
 from services.presenceTheard import PresenceThread
+from services.events import global_signals
+
 class PresenceInterface(QWidget):
     def __init__(self, back_to_home_callback):
         super().__init__()
         self.back_to_home = back_to_home_callback
         self.camera_active = False
         self.video_thread = None # Stockage de l'instance du thread
+        global_signals.data_changed.connect(self.load_cours)
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -47,12 +52,16 @@ class PresenceInterface(QWidget):
         self.btn_list = self.create_nav_btn("ÉLÈVES", 1, load_icon("users"))
         self.btn_add = self.create_nav_btn("AJOUT", 2, load_icon("add"))
         self.btn_add_cours = self.create_nav_btn("COURS", 3, load_icon("course"))
+        self.btn_add_examen = self.create_nav_btn("EXAMEN", 4, load_icon("course"))
+        self.btn_data = self.create_nav_btn("DONNÉES", 5, load_icon("add"))
         self.btn_cam.setChecked(True)
 
         sidebar_layout.addWidget(self.btn_cam)
         sidebar_layout.addWidget(self.btn_list)
         sidebar_layout.addWidget(self.btn_add)
         sidebar_layout.addWidget(self.btn_add_cours)
+        sidebar_layout.addWidget(self.btn_add_examen)
+        sidebar_layout.addWidget(self.btn_data)
         sidebar_layout.addStretch()
 
         btn_back = QPushButton("Accueil")
@@ -73,12 +82,15 @@ class PresenceInterface(QWidget):
         self.stack.addWidget(ElevesView()) # Index 1
         self.stack.addWidget(AjoutEleveView()) # Index 2
         self.stack.addWidget(AjoutCoursView()) # Index 3
+        self.stack.addWidget(AjoutExamenView()) # Index 4
+        self.stack.addWidget(GestionReferentielsView()) # Index 5
 
         self.stack.setStyleSheet("background: transparent;")
         layout.addWidget(self.stack, stretch=5)
     def load_cours(self):
         try:
             response = requests.get("http://127.0.0.1:8000/cours/all")
+            response.raise_for_status()
             cours_list = response.json()
 
             self.cours_select.clear()
@@ -87,7 +99,8 @@ class PresenceInterface(QWidget):
                 # affichage = nom du cours
                 # data = id du cours
                 self.cours_select.addItem(
-                    f"{cours['Nom_cours']} - {cours['Salle_cours']}",
+                    f"{cours.get('nom_cours') or cours.get('Nom_cours', '')} - "
+                    f"Salle #{cours.get('id_salle_salle') or cours.get('Salle_cours', '')}",
                     cours["Id_cours"]
                 )
         except Exception as e:
@@ -142,12 +155,12 @@ class PresenceInterface(QWidget):
         self.load_cours()
 
     def start_presence_camera(self):
-        #selection cours
+        """Active la caméra et lance le VideoThread pour le traitement."""
+        # Sélection du cours
         self.selected_cours_id = self.cours_select.currentData()
         if not self.selected_cours_id:
             print("Aucun cours sélectionné")
             return
-        """Active la caméra et lance le VideoThread pour le traitement"""
         self.cam_scroll = QScrollArea()
         self.cam_scroll.setWidgetResizable(True)
         self.cam_scroll.setStyleSheet("background: transparent; border: none;")

@@ -25,8 +25,41 @@ QLabel {
     background: transparent;
 }
 
-QLineEdit, QComboBox, QTableWidget, QProgressBar {
+QLineEdit, QComboBox, QDateEdit, QTimeEdit, QTableWidget, QProgressBar {
     font-size: 12px;
+}
+
+QComboBox, QDateEdit, QTimeEdit {
+    background-color: #151826;
+    color: #f4f7fb;
+    border: 1px solid #23283d;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+QComboBox QAbstractItemView,
+QCalendarWidget,
+QCalendarWidget QWidget#qt_calendar_navigationbar,
+QCalendarWidget QAbstractItemView {
+    background-color: #151826;
+    color: #f4f7fb;
+    selection-background-color: #2a304b;
+    selection-color: #ffffff;
+}
+
+QDateEdit:focus, QTimeEdit:focus, QComboBox:focus {
+    border: 1px solid #4facfe;
+}
+
+QCalendarWidget QToolButton,
+QCalendarWidget QSpinBox {
+    background-color: #151826;
+    color: #f4f7fb;
+}
+
+QCalendarWidget QAbstractItemView:enabled {
+    background-color: #151826;
+    color: #f4f7fb;
 }
 """
 

@@ -12,14 +12,15 @@ def create_examen(examen, db):
             Examen.id_matiere_matiere == examen.id_matiere_matiere
         )
     ).first()
+
     if not examen_verifie:
-        new_examen =Examen(
-        date_examen=examen.date_examen,
-        Heure_debut=examen.heure_debut,
-        Heure_fin=examen.heure_fin,
-        semestre_examen=examen.semestre_examen,
-        id_salle_salle=examen.id_salle_salle,
-        id_matiere_matiere=examen.id_matiere_matiere
+        new_examen = Examen(
+            date_examen=examen.date_examen,
+            Heure_debut=examen.heure_debut,
+            Heure_fin=examen.heure_fin,
+            semestre_examen=examen.semestre_examen,
+            id_salle_salle=examen.id_salle_salle,
+            id_matiere_matiere=examen.id_matiere_matiere
         )
         try:
             db.add(new_examen)
@@ -27,12 +28,18 @@ def create_examen(examen, db):
             db.refresh(new_examen)
             return new_examen
         except IntegrityError as e:
+            # Correction : rollback explicite + retour None au lieu d'un
+            # retour implicite silencieux qui masque l'erreur.
+            db.rollback()
             print(e)
-    else :
+            return None
+    else:
         raise HTTPException(
             status_code=409,
             detail="examen existant"
         )
+
+
 def get_examen(db):
     examen_verifie = db.query(Examen).all()
     return examen_verifie  # retourne [] si vide

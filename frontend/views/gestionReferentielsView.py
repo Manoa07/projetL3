@@ -39,8 +39,15 @@ class GestionReferentielsView(QWidget):
         for field in (nom, prenom, matricule):
             layout.addWidget(field)
         button = QPushButton("Enregistrer le professeur")
+        button.setFixedSize(300, 40)
+        button.setStyleSheet(
+            """ 
+              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
+              QPushButton:hover{ background-color: #052613;}
+            """
+        )
         button.clicked.connect(lambda: self.save_professeur(nom, prenom, matricule))
-        layout.addWidget(button)
+        layout.addWidget(button, alignment = Qt.AlignmentFlag.AlignCenter )
         layout.addStretch()
         return page
 
@@ -50,8 +57,15 @@ class GestionReferentielsView(QWidget):
         name = self.input_field(placeholder)
         layout.addWidget(name)
         button = QPushButton(f"Enregistrer {title.lower()}")
+        button.setFixedSize(300, 40)
+        button.setStyleSheet(
+            """ 
+              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
+              QPushButton:hover{ background-color: #052613;}
+            """
+        )
         button.clicked.connect(lambda: self.save_name(name, kind, title))
-        layout.addWidget(button)
+        layout.addWidget(button, alignment = Qt.AlignmentFlag.AlignCenter )        
         layout.addStretch()
         return page
 

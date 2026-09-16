@@ -82,9 +82,9 @@ class ExamGuardApp(QMainWindow):
                 color: white;
                 font-size: 17px;
                 font-weight: 700;
-                padding: 40px 34px;
-                min-width: 250px;
-                min-height: 170px;
+                padding: 24px 24px;
+                min-width: 180px;
+                min-height: 110px;
                 text-align: center;
             }
             QPushButton:hover {

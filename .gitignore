@@ -17,7 +17,7 @@ data/
 .vscode/
 Backend/.vscode/
 frontend/.vscode/
-/Backend/upload/**
+**/upload/*
 .python-version
 *.log
 *.sql

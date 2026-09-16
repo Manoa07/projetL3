@@ -74,7 +74,7 @@ Puis activez la surveillance vidéo :
 
 ---
 
-## 🔄 Comment Augmenter la Précision du Modèle ?
+## Comment Augmenter la Précision du Modèle ?
 
 Pour que le modèle soit encore plus performant en conditions réelles (différentes personnes, habits, éclairages) :
 1. Faites passer **2 ou 3 personnes différentes** devant le collecteur :

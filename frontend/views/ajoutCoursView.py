@@ -131,9 +131,12 @@ class AjoutCoursView(QWidget):
 
         btn_save = QPushButton("ENREGISTRER LE COURS")
         btn_save.setIcon(load_icon("course"))
-        btn_save.setFixedSize(300, 50)
+        btn_save.setFixedSize(300, 40)
         btn_save.setStyleSheet(
-            "QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; }"
+            """ 
+              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
+              QPushButton:hover{ background-color: #052613;}
+            """
         )
         btn_save.clicked.connect(self.submit_cours)
         layout.addWidget(btn_save, alignment=Qt.AlignmentFlag.AlignCenter)

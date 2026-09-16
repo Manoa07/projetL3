@@ -60,7 +60,7 @@ class ExamGuardApp(QMainWindow):
         layout.setContentsMargins(36, 36, 36, 36)
         layout.setSpacing(22)
         
-        pixmap = QPixmap("../image/logo_ispm.png") manoa
+        pixmap = QPixmap("../image/logo_ispm.png")
 
         logo_label = QLabel()
         logo_label.setPixmap(pixmap)

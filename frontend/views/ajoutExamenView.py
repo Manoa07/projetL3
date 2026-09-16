@@ -63,6 +63,13 @@ class AjoutExamenView(QWidget):
         save = QPushButton("ENREGISTRER L'EXAMEN")
         save.setIcon(load_icon("course"))
         save.clicked.connect(self.submit)
+        save.setStyleSheet(
+            """ 
+              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
+              QPushButton:hover{ background-color: #052613;}
+            """
+        )
+        save.setFixedSize(300, 40)
         layout.addWidget(save, alignment=Qt.AlignmentFlag.AlignCenter)
 
         refresh = QPushButton("↻ Actualiser les salles et matières")

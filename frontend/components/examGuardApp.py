@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QPixmap
 
 # Importation de vos nouveaux modules séparés
 from components.icon_loader import load_icon
@@ -51,12 +52,20 @@ class ExamGuardApp(QMainWindow):
         self.setCentralWidget(container)
 
     def create_home_menu(self):
+        
         """Crée l'interface avec les 2 gros boutons"""
         home_widget = QWidget()
         layout = QVBoxLayout(home_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setContentsMargins(36, 36, 36, 36)
         layout.setSpacing(22)
+        
+        pixmap = QPixmap("../image/logo_ispm.png") manoa
+
+        logo_label = QLabel()
+        logo_label.setPixmap(pixmap)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(logo_label)
 
         title = QLabel("GESTION DE L'INTERFACE")
         title.setStyleSheet("font-size: 30px; font-weight: 800; color: #f4f7fb; letter-spacing: 1.6px;")

@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QSize
 import requests
+from config import API_BASE_URL
 from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
 from components.cameraView import CameraView
@@ -89,7 +90,7 @@ class PresenceInterface(QWidget):
         layout.addWidget(self.stack, stretch=5)
     def load_cours(self):
         try:
-            response = requests.get("http://127.0.0.1:8000/cours/all")
+            response = requests.get(f"{API_BASE_URL}/cours/all")
             response.raise_for_status()
             cours_list = response.json()
 

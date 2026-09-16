@@ -1,9 +1,24 @@
-from sqlalchemy.exc import IntegrityError
+import logging
+
 from fastapi import HTTPException
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
+from models.eleve import Eleve
+from models.examen import Examen
 from models.surveillance import Surveillance
 
+
+logger = logging.getLogger(__name__)
+
 def create_surveillance(surveillance,db):
+    eleve = db.query(Eleve).filter(Eleve.Id_eleve == surveillance.id_eleve).first()
+    if not eleve:
+        raise HTTPException(status_code=404, detail="Élève introuvable")
+
+    examen = db.query(Examen).filter(Examen.id_examen == surveillance.id_examen).first()
+    if not examen:
+        raise HTTPException(status_code=404, detail="Examen introuvable")
+
     surveillance_verifie=db.query(Surveillance).filter(
         and_(
             Surveillance.id_eleve==surveillance.id_eleve,
@@ -23,7 +38,19 @@ def create_surveillance(surveillance,db):
             db.refresh(new_surveillance)
             return new_surveillance
         except IntegrityError as e:
-            print(e)
+            db.rollback()
+            logger.error("Erreur d'intégrité lors de la création de la surveillance", exc_info=e)
+            raise HTTPException(
+                status_code=409,
+                detail="La surveillance n'a pas pu être enregistrée.",
+            ) from e
+        except Exception as e:
+            db.rollback()
+            logger.error("Erreur lors de la création de la surveillance", exc_info=e)
+            raise HTTPException(
+                status_code=500,
+                detail="Erreur interne lors de la création de la surveillance.",
+            ) from e
     else:
         # Correction : 401 (Unauthorized) était sémantiquement incorrect.
         # 409 (Conflict) est le bon code quand la ressource existe déjà,

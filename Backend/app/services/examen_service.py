@@ -1,7 +1,12 @@
-from sqlalchemy.exc import IntegrityError
+import logging
+
 from fastapi import HTTPException
 from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
 from models.examen import Examen
+
+
+logger = logging.getLogger(__name__)
 
 def create_examen(examen, db):
     examen_verifie = db.query(Examen).filter(
@@ -28,11 +33,19 @@ def create_examen(examen, db):
             db.refresh(new_examen)
             return new_examen
         except IntegrityError as e:
-            # Correction : rollback explicite + retour None au lieu d'un
-            # retour implicite silencieux qui masque l'erreur.
             db.rollback()
-            print(e)
-            return None
+            logger.error("Erreur d'intégrité lors de la création de l'examen", exc_info=e)
+            raise HTTPException(
+                status_code=409,
+                detail="L'examen n'a pas pu être enregistré.",
+            ) from e
+        except Exception as e:
+            db.rollback()
+            logger.error("Erreur lors de la création de l'examen", exc_info=e)
+            raise HTTPException(
+                status_code=500,
+                detail="Erreur interne lors de la création de l'examen.",
+            ) from e
     else:
         raise HTTPException(
             status_code=409,

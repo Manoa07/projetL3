@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 
 from PyQt6.QtCore import QTimer, Qt
 import httpx
+from config import API_BASE_URL
 import asyncio
 from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
@@ -90,7 +91,7 @@ class ElevesView(QWidget):
         try:
             async with httpx.AsyncClient() as client:
                 # Appel à votre backend local
-                response = await client.get("http://127.0.0.1:8000/eleve/all")
+                response = await client.get(f"{API_BASE_URL}/eleve/all")
                 
                 if response.status_code == 200:
                     eleves = response.json()

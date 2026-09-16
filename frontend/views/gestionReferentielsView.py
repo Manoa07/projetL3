@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QLineEdit, QMessageBox, QPushButton, QTabWidget, QVBoxLayout, QWidget
 import requests
+from config import API_BASE_URL
 from services.events import global_signals
 
 
@@ -57,7 +58,7 @@ class GestionReferentielsView(QWidget):
 
     def post(self, endpoint, payload, success):
         try:
-            response = requests.post(f"http://127.0.0.1:8000/{endpoint}", json=payload, timeout=10)
+            response = requests.post(f"{API_BASE_URL}/{endpoint}", json=payload, timeout=10)
             if response.status_code in (200, 201):
                 self.status.setText(success)
                 self.status.setStyleSheet("color:#2ecc71;")

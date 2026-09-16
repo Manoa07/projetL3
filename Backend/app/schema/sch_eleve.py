@@ -11,13 +11,15 @@ class Create_eleve(BaseModel):
     Prenom_eleve:str
     Classe_eleve:str
     Numero_eleve:int
+    matricule_eleve: Optional[int] = None
     @classmethod
     def as_form(
         cls,
         Nom_eleve: str = Form(...),
         Prenom_eleve : str = Form(...),
         Classe_eleve :str = Form(...),
-        Numero_eleve : int = Form(...)
+        Numero_eleve : int = Form(...),
+        matricule_eleve: Optional[int] = Form(None),
         
     ):
         
@@ -25,7 +27,8 @@ class Create_eleve(BaseModel):
             Nom_eleve=Nom_eleve,
             Prenom_eleve=Prenom_eleve,
             Classe_eleve=Classe_eleve,
-            Numero_eleve=Numero_eleve
+            Numero_eleve=Numero_eleve,
+            matricule_eleve=matricule_eleve,
             
         )
 
@@ -33,6 +36,7 @@ class eleve_Classe_Nom(BaseModel):
     Prenom_eleve:str
     Classe_eleve:str
     Numero_eleve:int
+    matricule_eleve: Optional[int] = None
 
 class Reponse_eleve(BaseModel):
     Id_eleve :int
@@ -40,7 +44,7 @@ class Reponse_eleve(BaseModel):
     Prenom_eleve:str
     Classe_eleve:str
     Numero_eleve:int
-    embedding:Optional[List[float]]=None
+    matricule_eleve: Optional[int] = None
     presence:Optional[List[Reponse_presence]]=None
     
     class Config:
@@ -52,5 +56,6 @@ class Id_eleve(BaseModel):
     Prenom_eleve:str
     Classe_eleve:str
     Numero_eleve:int
+    matricule_eleve: Optional[int] = None
     class Config:
         from_attributes=True

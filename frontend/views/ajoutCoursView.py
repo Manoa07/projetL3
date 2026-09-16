@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QDate, QTime
 import requests
+from config import API_BASE_URL
 from components.icon_loader import load_icon
 from services.events import global_signals
 
@@ -171,7 +172,7 @@ class AjoutCoursView(QWidget):
         )
         try:
             for field, endpoint, label_fn, identifier in endpoints:
-                response = requests.get(f"http://127.0.0.1:8000/{endpoint}", timeout=5)
+                response = requests.get(f"{API_BASE_URL}/{endpoint}", timeout=5)
                 response.raise_for_status()
                 field.clear()
                 field.addItem("— Sélectionner —", None)
@@ -208,7 +209,7 @@ class AjoutCoursView(QWidget):
 
         try:
             response = requests.post(
-                "http://127.0.0.1:8000/cours/create", json=data, timeout=10
+                f"{API_BASE_URL}/cours/create", json=data, timeout=10
             )
             if response.status_code in (200, 201):
                 QMessageBox.information(self, "Succès", "Cours ajouté avec succès !")

@@ -15,3 +15,7 @@ class Examen(Base):
     id_matiere_matiere=Column(Integer, ForeignKey("matiere.id_matiere"), nullable=True)
     cours=relationship("Cours",back_populates="examen")
     surveillance=relationship("Surveillance",back_populates="examen")
+    presence_examen = relationship("PresenceExamen", back_populates="examen")
+    surveillance_examen = relationship("SurveillanceExamen", back_populates="examen")
+    salle = relationship("Salle", back_populates="examens")
+    matiere = relationship("Matiere", back_populates="examens")

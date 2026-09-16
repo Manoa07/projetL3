@@ -6,6 +6,7 @@ import json
 import sys
 import tempfile
 import requests
+from config import API_BASE_URL
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import PoseLandmarker
 from mediapipe.tasks.python.vision import PoseLandmarkerOptions
@@ -141,7 +142,7 @@ def send_alert_to_api(id_eleve, remarque):
             "Remarque":     remarque,
         }
         requests.post(
-            "http://127.0.0.1:8000/surveillance/create",
+            f"{API_BASE_URL}/surveillance/create",
             json=data,
             timeout=2,
         )

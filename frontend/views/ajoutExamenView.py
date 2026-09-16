@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QLabel, QPushButton, QMessageBox, QWidget,
 )
 import requests
+from config import API_BASE_URL
 from components.icon_loader import load_icon
 from services.events import global_signals
 from views.ajoutCoursView import make_time_edit   # réutilisation du même helper
@@ -79,8 +80,8 @@ class AjoutExamenView(QWidget):
 
     def load_references(self):
         try:
-            sr = requests.get("http://127.0.0.1:8000/salle/all",   timeout=5)
-            mr = requests.get("http://127.0.0.1:8000/matiere/all", timeout=5)
+            sr = requests.get(f"{API_BASE_URL}/salle/all",   timeout=5)
+            mr = requests.get(f"{API_BASE_URL}/matiere/all", timeout=5)
             sr.raise_for_status(); mr.raise_for_status()
             self.salle.clear();   self.salle.addItem("— Sélectionner —", None)
             self.matiere.clear(); self.matiere.addItem("— Sélectionner —", None)
@@ -116,7 +117,7 @@ class AjoutExamenView(QWidget):
 
         try:
             response = requests.post(
-                "http://127.0.0.1:8000/examen/create", json=data, timeout=10
+                f"{API_BASE_URL}/examen/create", json=data, timeout=10
             )
             if response.status_code in (200, 201):
                 QMessageBox.information(self, "Succès", "Examen ajouté avec succès.")

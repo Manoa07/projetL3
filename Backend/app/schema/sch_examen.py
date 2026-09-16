@@ -12,11 +12,12 @@ class Create_examen(BaseModel):
         from_attributes=True
 
 class Voir_examens(BaseModel):
-    date_examen:date
-    Heure_debut:time
-    Heure_fin:time
+    id_examen: int                      # BUG-11 : exposer l'id pour que le frontend puisse l'utiliser
+    date_examen: date
+    Heure_debut: time
+    Heure_fin: time
     semestre_examen: str | None = None
     id_salle_salle: int | None = None
     id_matiere_matiere: int | None = None
     class Config:
-        from_attributes=True
+        from_attributes = True

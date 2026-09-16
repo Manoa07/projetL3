@@ -27,3 +27,4 @@ frontend/.vscode/
 !.env.example
 
 
+.env

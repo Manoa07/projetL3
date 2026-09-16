@@ -37,7 +37,7 @@ class PresenceInterface(QWidget):
         # --- 1. BARRE LATÉRALE ---
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
-        self.sidebar.setFixedWidth(108)
+        self.sidebar.setFixedWidth(155)
         self.sidebar.setStyleSheet("""
             QFrame#Sidebar {
                 background-color: #151826;
@@ -111,9 +111,23 @@ class PresenceInterface(QWidget):
         placeholder_layout = QVBoxLayout(self.cam_placeholder)
         placeholder_layout.setContentsMargins(24, 24, 24, 24)
         placeholder_layout.setSpacing(16)
-        
+
         title = QLabel("<b style='color:#4facfe; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
         placeholder_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
+
+        # BUG-14 : cours_select créé et ajouté au layout AVANT insertWidget
+        self.cours_select = QComboBox()
+        self.cours_select.setFixedWidth(300)
+        self.cours_select.setStyleSheet("""
+            QComboBox {
+                background: #1a1f2f;
+                border: 1px solid #2a2f45;
+                border-radius: 10px;
+                padding: 10px 12px;
+                color: #f4f7fb;
+            }
+            QComboBox::drop-down { border: none; }
+        """)
 
         self.start_btn = QPushButton("ACTIVER LE SCAN DE PRÉSENCE")
         self.start_btn.setIcon(load_icon("play"))
@@ -130,37 +144,24 @@ class PresenceInterface(QWidget):
             QPushButton:hover { background: #37b8ff; }
         """)
         self.start_btn.clicked.connect(self.start_presence_camera)
-        
+
         placeholder_layout.addStretch()
+        placeholder_layout.addWidget(self.cours_select, alignment=Qt.AlignmentFlag.AlignCenter)
         placeholder_layout.addWidget(self.start_btn, alignment=Qt.AlignmentFlag.AlignCenter)
         placeholder_layout.addStretch()
-        
+
+        # insertWidget après construction complète du widget
         self.stack.insertWidget(0, self.cam_placeholder)
-        self.cours_select = QComboBox()
-        self.cours_select.setFixedWidth(300)
-        self.cours_select.setStyleSheet("""
-            QComboBox {
-                background: #1a1f2f;
-                border: 1px solid #2a2f45;
-                border-radius: 10px;
-                padding: 10px 12px;
-                color: #f4f7fb;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-        """)
-        placeholder_layout.addWidget(self.cours_select, alignment=Qt.AlignmentFlag.AlignCenter)
         # Charger les cours
         self.load_cours()
 
     def start_presence_camera(self):
-        """Active la caméra et lance le VideoThread pour le traitement."""
-        # Sélection du cours
+        #selection cours
         self.selected_cours_id = self.cours_select.currentData()
         if not self.selected_cours_id:
             print("Aucun cours sélectionné")
             return
+        """Active la caméra et lance le VideoThread pour le traitement"""
         self.cam_scroll = QScrollArea()
         self.cam_scroll.setWidgetResizable(True)
         self.cam_scroll.setStyleSheet("background: transparent; border: none;")
@@ -233,7 +234,7 @@ class PresenceInterface(QWidget):
         btn = QPushButton(text)
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
-        btn.setFixedSize(100, 86)
+        btn.setFixedSize(135, 86)
         btn.setIcon(icon)
         btn.setIconSize(QSize(24, 24))
         btn.setStyleSheet(NAV_BUTTON_STYLE)

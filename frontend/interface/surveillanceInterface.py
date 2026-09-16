@@ -20,8 +20,6 @@ from components.alertCard import AlertCard
 
 class SurveillanceInterface(QWidget):
     def __init__(self, back_to_home_callback):
-        # Correction : super().__init__() doit être appelé en premier pour que
-        # l'objet Qt C++ soit initialisé avant toute affectation d'attributs.
         super().__init__()
         self.last_alert_time = 0
         self.alert_cooldown = 5
@@ -35,7 +33,7 @@ class SurveillanceInterface(QWidget):
         # --- A. BARRE LATÉRALE ---
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
-        self.sidebar.setFixedWidth(108)
+        self.sidebar.setFixedWidth(140)
         self.sidebar.setStyleSheet("""
             QFrame#Sidebar {
                 background-color: #151826;
@@ -117,19 +115,30 @@ class SurveillanceInterface(QWidget):
 
     def stop_live_monitoring(self):
         """Arrêt propre : Thread -> Widget -> UI"""
-        if self.live_view:
-            self.live_view.stop_camera() # Éteint la LED
-            self.stack.removeWidget(self.live_scroll)
-            self.live_scroll.deleteLater()
+        if self.live_view is not None:
+            try:
+                self.live_view.stop_camera()
+            except Exception as e:
+                print("[SurveillanceInterface] Erreur lors de l'arrêt de la caméra :", e)
             self.live_view = None
-            self.setup_placeholder_page()
-            self.stack.setCurrentIndex(0)
+
+        if hasattr(self, 'live_scroll') and self.live_scroll is not None:
+            try:
+                self.stack.removeWidget(self.live_scroll)
+                self.live_scroll.deleteLater()
+            except Exception as e:
+                print("[SurveillanceInterface] Erreur suppression live_scroll :", e)
+            self.live_scroll = None
+
+        self.setup_placeholder_page()
+        self.stack.setCurrentIndex(0)
+
 
     def create_nav_btn(self, text, index, icon):
         btn = QPushButton(text)
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
-        btn.setFixedSize(100, 86)
+        btn.setFixedSize(120, 86)
         btn.setIcon(icon)
         btn.setIconSize(QSize(24, 24))
         btn.setStyleSheet(NAV_BUTTON_STYLE)

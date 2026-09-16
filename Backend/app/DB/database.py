@@ -1,50 +1,35 @@
 import os
+from pathlib import Path
 from typing import Annotated
-import os
 
 from dotenv import load_dotenv
 from fastapi import Depends
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-<<<<<<< Updated upstream
+_env_file = Path(__file__).resolve().parents[3] / ".env"
+if _env_file.exists():
+    load_dotenv(dotenv_path=_env_file)
+else:
+    load_dotenv()
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL doit être défini avec une URL PostgreSQL "
-        "(par exemple postgresql+psycopg2://user:password@localhost/dbname)."
-    )
+    raise RuntimeError("DATABASE_URL must be defined in the .env file.")
 if not DATABASE_URL.startswith(("postgresql://", "postgresql+psycopg2://")):
-    raise RuntimeError("DATABASE_URL doit utiliser PostgreSQL.")
+    raise RuntimeError("DATABASE_URL must use PostgreSQL.")
 
-engine = create_engine(DATABASE_URL)
-SessionLocal=sessionmaker(autocommit=False,autoflush=False,bind=engine)
-Base=declarative_base()
-=======
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not defined. Set it in the .env file.")
-
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"options": "-c client_encoding=UTF8"})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
->>>>>>> Stashed changes
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-<<<<<<< Updated upstream
-db_dependancy= Annotated[Session,Depends(get_db)]
-=======
 
 
 db_dependancy = Annotated[Session, Depends(get_db)]
-
->>>>>>> Stashed changes

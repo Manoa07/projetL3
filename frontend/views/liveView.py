@@ -38,6 +38,17 @@ class LiveView(QWidget):
     def stop_camera(self):
         """Arrêt sécurisé du thread"""
         if hasattr(self, 'thread') and self.thread is not None:
+            try:
+                self.thread.change_pixmap_signal.disconnect()
+            except Exception:
+                pass
+            try:
+                self.thread.alert_signal.disconnect()
+            except Exception:
+                pass
             if self.thread.isRunning():
                 self.thread.stop()
-            self.thread = None # Libère la référence
+            self.thread = None  # Libère la référence
+
+        if hasattr(self, 'cam1') and self.cam1 is not None:
+            self.cam1.clear_view()

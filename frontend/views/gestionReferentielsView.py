@@ -69,10 +69,16 @@ class GestionReferentielsView(QWidget):
         return False
 
     def save_professeur(self, nom, prenom, matricule):
+        # WARN-09 : valider que le matricule est un entier avant d'envoyer
+        matricule_val = matricule.text().strip()
+        if not matricule_val.lstrip("-").isdigit():
+            QMessageBox.warning(self, "Matricule invalide",
+                                "Le matricule doit être un nombre entier.")
+            return
         if self.post("professeur/create", {
-            "nom_professeur": nom.text().strip(),
-            "prenom_professeur": prenom.text().strip(),
-            "matricule_professeur": matricule.text().strip(),
+            "nom_professeur":     nom.text().strip(),
+            "prenom_professeur":  prenom.text().strip(),
+            "matricule_professeur": int(matricule_val),
         }, "Professeur enregistré. Il est maintenant disponible dans les cours."):
             nom.clear(); prenom.clear(); matricule.clear()
 

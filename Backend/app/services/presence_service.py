@@ -31,19 +31,11 @@ def create_presence(presence,db):
             status_code=409,
             detail="presence existant"
         )
-def get_presence_all(eleve_id,db):
-    eleve_verifie=db.query(Presence).filter(Presence.id_eleve==eleve_id).all()
+def get_presence_all(eleve_id, db):
+    return db.query(Presence).filter(Presence.id_eleve == eleve_id).all()  # [] si vide
+
+def get_presence(eleve_id, db):
+    eleve_verifie = db.query(Presence).filter(Presence.id_eleve == eleve_id).first()
     if not eleve_verifie:
-        raise HTTPException(
-            status_code=404,
-            detail="aucune presence sur cette eleve"
-        )
-    return eleve_verifie
-def get_presence(eleve_id,db):
-    eleve_verifie=db.query(Presence).filter(Presence.id_eleve==eleve_id).first()
-    if not eleve_verifie:
-        raise HTTPException(
-            status_code=404,
-            detail="eleve non trouvé"
-        )
+        raise HTTPException(status_code=404, detail="eleve non trouvé")
     return eleve_verifie

@@ -27,7 +27,8 @@ def professeurs(db: db_dependancy):
 
 @router.post("/professeur/create")
 def create_professeur(data: ProfesseurCreate, db: db_dependancy):
-    value = Professeur(**data.dict())
+    # Correction : .dict() est déprécié en Pydantic v2 → .model_dump()
+    value = Professeur(**data.model_dump())
     db.add(value)
     db.commit()
     db.refresh(value)

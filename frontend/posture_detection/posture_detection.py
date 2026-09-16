@@ -102,22 +102,9 @@ _debug_log(
     },
 )
 
-try:
-    _debug_log(
-        "H1",
-        "posture_detection.py:module:pose_init",
-        "Creating PoseLandmarker",
-        {"running_mode": str(options.running_mode)},
-    )
-    pose_landmarker = PoseLandmarker.create_from_options(options)
-except Exception as e:
-    _debug_log(
-        "H1",
-        "posture_detection.py:module:pose_init:exception",
-        "PoseLandmarker init failed",
-        {"type": type(e).__name__, "error": str(e)},
-    )
-    raise
+# BUG-02 : L'instance PoseLandmarker est créée dans VideoThread.run() et dans main().
+# On ne crée plus d'instance globale ici pour éviter le double chargement en mémoire.
+# La fonction main() crée sa propre instance locale.
 
 def _l1_dist(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
@@ -127,78 +114,18 @@ def _l2_dist(a, b):
     dy = a[1] - b[1]
     return (dx * dx + dy * dy) ** 0.5
 
-def _estimate_person_scale(points):
-    left_shoulder = points[11]
-    right_shoulder = points[12]
-    if left_shoulder and right_shoulder:
-        s = _l2_dist(left_shoulder, right_shoulder)
-        if s > 1:
-            return s
-
-    left_hip = points[23]
-    right_hip = points[24]
-    if left_hip and right_hip:
-        s = _l2_dist(left_hip, right_hip)
-        if s > 1:
-            return s
-
-    if left_shoulder and left_hip:
-        s = _l2_dist(left_shoulder, left_hip)
-        if s > 1:
-            return s
-    if right_shoulder and right_hip:
-        s = _l2_dist(right_shoulder, right_hip)
-        if s > 1:
-            return s
-
-    return None
-
-def _scaled_threshold(scale, fallback_px, factor):
-    if scale is None:
-        return float(fallback_px)
-    return max(10.0, float(scale) * float(factor))
-
-# Détection tête tournée (version moins sensible)
-def detect_head_turn(points):
-    nose = points[0]
-    left_ear = points[7]
-    right_ear = points[8]
-    if nose and left_ear and right_ear:
-        center = (left_ear[0] + right_ear[0]) / 2
-        scale = _estimate_person_scale(points)
-        thr = _scaled_threshold(scale, fallback_px=50, factor=0.5)   # plus large
-        if abs(nose[0] - center) > thr:
-            return "Tete tourne"
-    return None
-
-def detect_hand_under_table(points):
-    left_wrist = points[15]
-    right_wrist = points[16]
-    left_hip = points[23]
-    right_hip = points[24]
-    scale = _estimate_person_scale(points)
-    thr = _scaled_threshold(scale, fallback_px=70, factor=0.6)   # plus haut
-    if left_wrist and left_hip and left_wrist[1] > left_hip[1] + thr:
-        return "Main gauche sous table"
-    if right_wrist and right_hip and right_wrist[1] > right_hip[1] + thr:
-        return "Main droite sous table"
-    return None
-
-def detect_phone(points):
-    nose = points[0]
-    left_wrist = points[15]
-    right_wrist = points[16]
-    if nose:
-        scale = _estimate_person_scale(points)
-        thr_x = _scaled_threshold(scale, fallback_px=70, factor=0.6)
-        thr_y = _scaled_threshold(scale, fallback_px=100, factor=0.8)
-        if left_wrist and abs(left_wrist[0]-nose[0]) < thr_x and abs(left_wrist[1]-nose[1]) < thr_y:
-            return "Telephone suspect"
-        if right_wrist and abs(right_wrist[0]-nose[0]) < thr_x and abs(right_wrist[1]-nose[1]) < thr_y:
-            return "Telephone suspect"
-    return None
 
 last_sent = {}
+
+# WARN-03 : id_examen courant, mis à jour par l'interface avant le lancement
+current_examen_id: int = 1
+
+
+def set_current_examen(id_examen: int):
+    """Appelé par l'interface pour définir l'examen en cours de surveillance."""
+    global current_examen_id
+    current_examen_id = id_examen
+
 
 def send_alert_to_api(id_eleve, remarque):
     key = f"{id_eleve}-{remarque}"
@@ -208,15 +135,15 @@ def send_alert_to_api(id_eleve, remarque):
     last_sent[key] = now
     try:
         data = {
-            "id_examen": 1,
-            "id_eleve": id_eleve,
+            "id_examen":    current_examen_id,   # WARN-03 : valeur dynamique
+            "id_eleve":     id_eleve,
             "Status_examen": "suspect",
-            "Remarque": remarque
+            "Remarque":     remarque,
         }
         requests.post(
             "http://127.0.0.1:8000/surveillance/create",
             json=data,
-            timeout=2
+            timeout=2,
         )
     except Exception as e:
         print("Erreur API :", e)
@@ -237,6 +164,9 @@ def main():
         },
     )
 
+    # BUG-02 : instance locale à main(), indépendante de VideoThread
+    pose_landmarker = PoseLandmarker.create_from_options(options)
+
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -244,7 +174,8 @@ def main():
     if not fps or fps <= 1:
         fps = 30.0
     frame_idx = 0
-    start_time = time.time()
+    # BUG-03 : timestamp relatif au démarrage (MediaPipe VIDEO exige croissance depuis 0)
+    start_ms = int(time.time() * 1000)
     last_timestamp_ms = -1
 
     while cap.isOpened():
@@ -258,7 +189,7 @@ def main():
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
         computed_ms = int((frame_idx * 1000.0) / fps)
-        wall_ms = int((time.time() - start_time) * 1000.0)
+        wall_ms = int(time.time() * 1000) - start_ms
         timestamp_ms = computed_ms if computed_ms > 0 else wall_ms
         if timestamp_ms <= last_timestamp_ms:
             timestamp_ms = last_timestamp_ms + 1
@@ -325,17 +256,8 @@ def main():
 
                     students[assigned_id] = nose
 
-                    # Analyse comportementale pour cet étudiant
-                    events = []
-                    head = detect_head_turn(points)
-                    if head:
-                        events.append(head)
-                    hand = detect_hand_under_table(points)
-                    if hand:
-                        events.append(hand)
-                    phone = detect_phone(points)
-                    if phone:
-                        events.append(phone)
+                    # Analyse comportementale pour cet étudiant via le classifieur IA
+                    events = detect_suspicious_movements(points)
 
                     # Mise à jour des compteurs pour cet étudiant
                     # On considère que s'il n'y a pas d'événement, on efface ses compteurs

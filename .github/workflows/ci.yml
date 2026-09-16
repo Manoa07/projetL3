@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.5.7
+          pip install -r requirements-backend.txt
+          pip install -r requirements-frontend.txt
+
+      - name: Lint with Ruff
+        run: |
+          ruff check Backend frontend
+          ruff format --check Backend frontend
+
+      - name: Python syntax validation
+        run: |
+          python -m compileall Backend frontend
+
+      - name: Build backend Docker image
+        run: docker build -f Backend/Dockerfile -t projetl3-backend .
+
+      - name: Build frontend Docker image
+        run: docker build -f frontend/Dockerfile -t projetl3-frontend .

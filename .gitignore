@@ -22,5 +22,8 @@ frontend/.vscode/
 *.log
 *.sql
 
+# Local environment
+.env
+!.env.example
 
 

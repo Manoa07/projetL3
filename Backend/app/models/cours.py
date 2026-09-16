@@ -17,7 +17,11 @@ class Cours(Base):
     id_salle_salle=Column(Integer, ForeignKey("salle.id_salle"), nullable=True)
     id_matiere_matiere=Column(Integer, ForeignKey("matiere.id_matiere"), nullable=True)
     presence =relationship("Presence",back_populates="cours")
+    presence_cours = relationship("PresenceCours", back_populates="cours")
     examen=relationship("Examen",back_populates="cours")
+    professeur = relationship("Professeur", back_populates="cours")
+    salle = relationship("Salle", back_populates="cours")
+    matiere = relationship("Matiere", back_populates="cours")
 
     id_cours = synonym("Id_cours")
     nom_cours = synonym("Nom_cours")

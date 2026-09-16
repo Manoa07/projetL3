@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pickle
 from keras_facenet import FaceNet
 import requests
+from config import API_BASE_URL
 class SystemePresence:
     """
     Système de présence par reconnaissance faciale utilisant l'API PostgreSQL.
@@ -39,7 +40,7 @@ class SystemePresence:
     def charger_base(self):
         """Charge les embeddings depuis la base pour la comparaison rapide."""
         try:
-            reponse = requests.get("http://localhost:8000/eleve/all")
+            reponse = requests.get(f"{API_BASE_URL}/eleve/all")
             eleves = reponse.json()
             base = {}
             for eleve in eleves:
@@ -104,7 +105,7 @@ class SystemePresence:
         }
         try:
             reponse = requests.post(
-                "http://localhost:8000/presence/create",
+                f"{API_BASE_URL}/presence/create",
                 json=data
             )
             if reponse.status_code == 200:
@@ -207,7 +208,7 @@ class SystemePresence:
         }
         try:
             response = requests.post(
-            "http://localhost:8000/eleve/create",
+                f"{API_BASE_URL}/eleve/create",
             data=data,
             files=files
             )

@@ -11,8 +11,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -34,7 +32,7 @@ services:
       - .env
     environment:
       APP_ENV: ${APP_ENV}
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -54,8 +52,9 @@ services:
       - backend
     environment:
       DISPLAY: ${DISPLAY:-:0}
+      API_BASE_URL: http://backend:8000
     volumes:
-      - ./frontend/models:/app/models
+      - ./frontend/models:/app/models:ro
       - /tmp/.X11-unix:/tmp/.X11-unix
     stdin_open: true
     tty: true

@@ -6,6 +6,7 @@ import numpy as np
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
 import requests
+from config import API_BASE_URL
 
 
 class PresenceThread(QThread):
@@ -106,7 +107,7 @@ class PresenceThread(QThread):
             _, buffer = cv2.imencode('.jpg', resized, encode_param)
 
             response = requests.post(
-                "http://127.0.0.1:8000/presence/detecter",
+                f"{API_BASE_URL}/presence/detecter",
                 files={"file": ("frame.jpg", buffer.tobytes(), "image/jpeg")},
                 data={"id_cours": self.id_cours},
                 timeout=3.0,

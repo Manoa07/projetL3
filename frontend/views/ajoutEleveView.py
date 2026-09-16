@@ -6,6 +6,7 @@ from PyQt6.QtGui import QPixmap
 import cv2
 from services.events import global_signals
 import httpx
+from config import API_BASE_URL
 import asyncio
 from components.icon_loader import load_icon
 
@@ -231,7 +232,7 @@ class AjoutEleveView(QWidget):
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    "http://127.0.0.1:8000/eleve/create",
+                    f"{API_BASE_URL}/eleve/create",
                     data=data,
                     files=files,
                 )

@@ -1,3 +1,4 @@
+import logging
 import pickle
 import shutil
 from sqlalchemy.exc import IntegrityError
@@ -8,6 +9,9 @@ from fastapi import HTTPException
 import numpy as np
 from models.eleve import Eleve
 from sqlalchemy import and_
+
+
+logger = logging.getLogger(__name__)
 
 # WARN-05 : instances partagées (singletons) — chargées une seule fois au démarrage
 # modules/presence.py utilise les mêmes via _get_detector() / _get_embedder()
@@ -82,6 +86,7 @@ def create_eleve(eleve, photo, images, db):
             Prenom_eleve=eleve.Prenom_eleve,
             Classe_eleve=eleve.Classe_eleve,
             Numero_eleve=eleve.Numero_eleve,
+            matricule_eleve=eleve.matricule_eleve,
             photo_eleve=filename,           # WARN-02 : nom de fichier uniquement
             embedding=pickle.dumps(finale_embedding),
         )
@@ -91,7 +96,15 @@ def create_eleve(eleve, photo, images, db):
             db.refresh(new_eleve)
         except IntegrityError as e:
             db.rollback()
+            logger.error("Erreur d'intégrité lors de la création de l'élève", exc_info=e)
             raise HTTPException(status_code=409, detail="Numéro d'élève déjà utilisé.") from e
+        except Exception as e:
+            db.rollback()
+            logger.error("Erreur lors de la création de l'élève", exc_info=e)
+            raise HTTPException(
+                status_code=500,
+                detail="Erreur interne lors de la création de l'élève.",
+            ) from e
 
         return {
             "Numero_eleve": new_eleve.Numero_eleve,
@@ -139,8 +152,8 @@ def get_eleve(db):
                     emb = pickle.loads(e.embedding)
                 elif isinstance(e.embedding, str):
                     emb = np.array(json.loads(e.embedding), dtype=np.float32)
-            except Exception as err:
-                print("Erreur décodage embedding :", err)
+            except Exception:
+                logger.exception("Erreur lors du décodage de l'embedding")
 
         resultat.append({
             "Id_eleve":    e.Id_eleve,

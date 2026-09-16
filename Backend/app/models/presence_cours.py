@@ -1,4 +1,5 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, Time
+from sqlalchemy.orm import relationship
 from DB.database import Base
 
 
@@ -10,3 +11,5 @@ class PresenceCours(Base):
     heure_depart_cours = Column(Time, nullable=True)
     id_cours_cours = Column(Integer, ForeignKey("cours.Id_cours"), nullable=False)
     id_eleve_eleve = Column(Integer, ForeignKey("eleve.Id_eleve"), nullable=False)
+    cours = relationship("Cours", back_populates="presence_cours")
+    eleve = relationship("Eleve", back_populates="presence_cours")

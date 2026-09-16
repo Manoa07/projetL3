@@ -114,76 +114,6 @@ def _l2_dist(a, b):
     dy = a[1] - b[1]
     return (dx * dx + dy * dy) ** 0.5
 
-def _estimate_person_scale(points):
-    left_shoulder = points[11]
-    right_shoulder = points[12]
-    if left_shoulder and right_shoulder:
-        s = _l2_dist(left_shoulder, right_shoulder)
-        if s > 1:
-            return s
-
-    left_hip = points[23]
-    right_hip = points[24]
-    if left_hip and right_hip:
-        s = _l2_dist(left_hip, right_hip)
-        if s > 1:
-            return s
-
-    if left_shoulder and left_hip:
-        s = _l2_dist(left_shoulder, left_hip)
-        if s > 1:
-            return s
-    if right_shoulder and right_hip:
-        s = _l2_dist(right_shoulder, right_hip)
-        if s > 1:
-            return s
-
-    return None
-
-def _scaled_threshold(scale, fallback_px, factor):
-    if scale is None:
-        return float(fallback_px)
-    return max(10.0, float(scale) * float(factor))
-
-# Détection tête tournée (version moins sensible)
-def detect_head_turn(points):
-    nose = points[0]
-    left_ear = points[7]
-    right_ear = points[8]
-    if nose and left_ear and right_ear:
-        center = (left_ear[0] + right_ear[0]) / 2
-        scale = _estimate_person_scale(points)
-        thr = _scaled_threshold(scale, fallback_px=50, factor=0.5)   # plus large
-        if abs(nose[0] - center) > thr:
-            return "Tete tourne"
-    return None
-
-def detect_hand_under_table(points):
-    left_wrist = points[15]
-    right_wrist = points[16]
-    left_hip = points[23]
-    right_hip = points[24]
-    scale = _estimate_person_scale(points)
-    thr = _scaled_threshold(scale, fallback_px=70, factor=0.6)   # plus haut
-    if left_wrist and left_hip and left_wrist[1] > left_hip[1] + thr:
-        return "Main gauche sous table"
-    if right_wrist and right_hip and right_wrist[1] > right_hip[1] + thr:
-        return "Main droite sous table"
-    return None
-
-def detect_phone(points):
-    nose = points[0]
-    left_wrist = points[15]
-    right_wrist = points[16]
-    if nose:
-        scale = _estimate_person_scale(points)
-        thr_x = _scaled_threshold(scale, fallback_px=70, factor=0.6)
-        thr_y = _scaled_threshold(scale, fallback_px=100, factor=0.8)
-        if left_wrist and abs(left_wrist[0]-nose[0]) < thr_x and abs(left_wrist[1]-nose[1]) < thr_y:
-            return "Telephone suspect"
-        if right_wrist and abs(right_wrist[0]-nose[0]) < thr_x and abs(right_wrist[1]-nose[1]) < thr_y:
-            return "Telephone suspect"
-    return None
 
 last_sent = {}
 
@@ -326,17 +256,8 @@ def main():
 
                     students[assigned_id] = nose
 
-                    # Analyse comportementale pour cet étudiant
-                    events = []
-                    head = detect_head_turn(points)
-                    if head:
-                        events.append(head)
-                    hand = detect_hand_under_table(points)
-                    if hand:
-                        events.append(hand)
-                    phone = detect_phone(points)
-                    if phone:
-                        events.append(phone)
+                    # Analyse comportementale pour cet étudiant via le classifieur IA
+                    events = detect_suspicious_movements(points)
 
                     # Mise à jour des compteurs pour cet étudiant
                     # On considère que s'il n'y a pas d'événement, on efface ses compteurs

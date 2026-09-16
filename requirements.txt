@@ -24,6 +24,8 @@ mtcnn
 keras-facenet
 # TensorFlow is required by mtcnn and keras-facenet for face embeddings.
 tensorflow>=2.21; python_version < "3.14"
+scikit-learn
+joblib
 
 # ---- Frontend : interface graphique PyQt6 -------------------------------------
 PyQt6

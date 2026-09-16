@@ -115,13 +115,24 @@ class SurveillanceInterface(QWidget):
 
     def stop_live_monitoring(self):
         """Arrêt propre : Thread -> Widget -> UI"""
-        if self.live_view:
-            self.live_view.stop_camera() # Éteint la LED
-            self.stack.removeWidget(self.live_scroll)
-            self.live_scroll.deleteLater()
+        if self.live_view is not None:
+            try:
+                self.live_view.stop_camera()
+            except Exception as e:
+                print("[SurveillanceInterface] Erreur lors de l'arrêt de la caméra :", e)
             self.live_view = None
-            self.setup_placeholder_page()
-            self.stack.setCurrentIndex(0)
+
+        if hasattr(self, 'live_scroll') and self.live_scroll is not None:
+            try:
+                self.stack.removeWidget(self.live_scroll)
+                self.live_scroll.deleteLater()
+            except Exception as e:
+                print("[SurveillanceInterface] Erreur suppression live_scroll :", e)
+            self.live_scroll = None
+
+        self.setup_placeholder_page()
+        self.stack.setCurrentIndex(0)
+
 
     def create_nav_btn(self, text, index, icon):
         btn = QPushButton(text)

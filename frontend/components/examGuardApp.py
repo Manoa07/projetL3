@@ -65,6 +65,7 @@ class ExamGuardApp(QMainWindow):
         logo_label = QLabel()
         logo_label.setPixmap(pixmap)
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_label.setStyleSheet("background-color: #fffff;")
         layout.addWidget(logo_label)
 
         title = QLabel("GESTION DE L'INTERFACE")

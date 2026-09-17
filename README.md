@@ -23,7 +23,7 @@ cd Backend/app
 
 ```bash
 cd frontend
-pip install PyQt6 qasync requests opencv-python mediapipe mtcnn keras-facenet numpy
+pip install PyQt6 qasync requests opencv-python mediapipe mtcnn keras-facenet numpy ultralytics
 ```
 
 ## Configuration
@@ -69,6 +69,33 @@ python main.py
 - `frontend/interface`: écrans principaux
 - `frontend/views`: vues secondaires
 - `frontend/services`: threads et services réseau
+
+### Détection YOLOv8
+
+La surveillance en direct utilise automatiquement `frontend/models/weights/yolov8n.pt` lorsque
+Ultralytics est installé. L’analyse de posture MediaPipe reste active et reçoit
+la frame originale; les annotations YOLO sont ajoutées uniquement à l’image
+affichée.
+
+Pour choisir un autre modèle ou un autre appareil:
+
+```powershell
+$env:YOLO_MODEL_PATH = "frontend/models/weights/yolov8m.pt"
+$env:YOLO_DEVICE = "cpu"
+$env:YOLO_CONFIDENCE = "0.25"
+$env:EXAM_ID = "1"
+$env:YOLO_FORBIDDEN_OBJECTS = "cell phone,laptop,tablet,book,backpack,bottle"
+$env:SURVEILLANCE_API_URL = "http://127.0.0.1:8000/surveillance/object-alert"
+cd frontend
+python main.py
+```
+
+`EXAM_ID` doit correspondre a un examen existant dans le backend. Lorsqu'un objet
+interdit est detecte, l'alerte est affichee dans le fil live et enregistree via
+`POST /surveillance/object-alert` avec son niveau de confiance.
+
+Si le modèle, Ultralytics ou sa configuration sont indisponibles, la surveillance
+continue avec le pipeline MediaPipe existant.
 
 ## Remarques de cohérence
 

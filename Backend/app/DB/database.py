@@ -5,6 +5,7 @@ from typing import Annotated
 from dotenv import load_dotenv
 from fastapi import Depends
 from sqlalchemy import create_engine
+<<<<<<< Updated upstream
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 
@@ -32,6 +33,12 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+=======
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import declarative_base
+
+DATABASE_URL = "postgresql://postgres:NyHartsAdmin@localhost:5432/surveillance"
+>>>>>>> Stashed changes
 
 
 def get_db():

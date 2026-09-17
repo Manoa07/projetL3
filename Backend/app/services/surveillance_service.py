@@ -1,16 +1,23 @@
+<<<<<<< Updated upstream
 import logging
 
 from fastapi import HTTPException
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 from models.eleve import Eleve
+=======
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
+>>>>>>> Stashed changes
 from models.examen import Examen
 from models.surveillance import Surveillance
+from schema.sch_surveillance import Create_surveillance
 
 
 logger = logging.getLogger(__name__)
 
 def create_surveillance(surveillance,db):
+<<<<<<< Updated upstream
     eleve = db.query(Eleve).filter(Eleve.Id_eleve == surveillance.id_eleve).first()
     if not eleve:
         raise HTTPException(status_code=404, detail="Élève introuvable")
@@ -24,6 +31,12 @@ def create_surveillance(surveillance,db):
             Surveillance.id_eleve==surveillance.id_eleve,
             Surveillance.id_examen==surveillance.id_examen
         )
+=======
+    surveillance_verifie = db.query(Surveillance).filter(
+        Surveillance.id_examen == surveillance.id_examen,
+        Surveillance.id_eleve == surveillance.id_eleve,
+        Surveillance.Remarque == surveillance.Remarque,
+>>>>>>> Stashed changes
     ).first()
     if not surveillance_verifie:
         new_surveillance=Surveillance(
@@ -37,6 +50,7 @@ def create_surveillance(surveillance,db):
             db.commit()
             db.refresh(new_surveillance)
             return new_surveillance
+<<<<<<< Updated upstream
         except IntegrityError as e:
             db.rollback()
             logger.error("Erreur d'intégrité lors de la création de la surveillance", exc_info=e)
@@ -62,3 +76,35 @@ def create_surveillance(surveillance,db):
 def voir_eleve(id_eleve, db):
     eleve_verifie = db.query(Surveillance).filter(Surveillance.id_eleve == id_eleve).all()
     return eleve_verifie  # retourne [] si vide
+=======
+        except IntegrityError as exc:
+            db.rollback()
+            raise HTTPException(status_code=422, detail="Surveillance invalide") from exc
+    else:
+        raise HTTPException(status_code=409, detail="Surveillance deja existante")
+
+def create_object_alert(alert, db):
+    if not db.query(Examen).filter(Examen.id_examen == alert.id_examen).first():
+        raise HTTPException(status_code=404, detail="Examen non trouve")
+
+    confidence = (
+        f" ({alert.confidence:.0%})"
+        if alert.confidence is not None
+        else ""
+    )
+    surveillance = Create_surveillance(
+        id_examen=alert.id_examen,
+        id_eleve=alert.id_eleve,
+        Status_examen="suspect",
+        Remarque=f"Objet interdit detecte: {alert.object_name}{confidence}",
+    )
+    return create_surveillance(surveillance, db)
+def voir_eleve(id_eleve,db):
+    eleve_verifie=db.query(Surveillance).filter(Surveillance.id_eleve==id_eleve).all()
+    if not eleve_verifie:
+        raise HTTPException(
+            status_code=404,
+            detail="non trouvé"
+        )
+    return eleve_verifie
+>>>>>>> Stashed changes

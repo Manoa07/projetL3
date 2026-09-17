@@ -1,19 +1,19 @@
 APP_STYLESHEET = """
 QWidget {
-    color: #f4f7fb;
+    color: #17212b;
     font-family: 'Segoe UI';
     font-size: 12px;
 }
 
 QMainWindow {
-    background-color: #0f111a;
+    background-color: #f6f8fb;
 }
 
 QFrame#Sidebar,
 QFrame#AlertsPanel,
 QFrame#Card {
-    background-color: #151826;
-    border: 1px solid #23283d;
+    background-color: #ffffff;
+    border: 1px solid #e4e9ef;
     border-radius: 16px;
 }
 
@@ -28,31 +28,81 @@ QLabel {
 QLineEdit, QComboBox, QTableWidget, QProgressBar {
     font-size: 12px;
 }
+<<<<<<< Updated upstream
+=======
+
+QComboBox, QDateEdit, QTimeEdit {
+    background-color: #ffffff;
+    color: #17212b;
+    border: 1px solid #d8e0e8;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+QComboBox QAbstractItemView,
+QCalendarWidget,
+QCalendarWidget QWidget#qt_calendar_navigationbar,
+QCalendarWidget QAbstractItemView {
+    background-color: #ffffff;
+    color: #17212b;
+    selection-background-color: #f7d8cf;
+    selection-color: #17212b;
+}
+
+QDateEdit:focus, QTimeEdit:focus, QComboBox:focus {
+    border: 1px solid #2e9d68;
+}
+
+QCalendarWidget QToolButton,
+QCalendarWidget QSpinBox {
+    background-color: #ffffff;
+    color: #17212b;
+}
+
+QCalendarWidget QAbstractItemView:enabled {
+    background-color: #ffffff;
+    color: #17212b;
+}
+>>>>>>> Stashed changes
 """
 
 NAV_BUTTON_STYLE = """
 QPushButton {
     background: transparent;
     border: 1px solid transparent;
-    color: #7a7c8c;
+    color: #718096;
     font-size: 11px;
     font-weight: 600;
     padding: 12px 8px;
     border-radius: 14px;
     text-align: center;
 }
+<<<<<<< Updated upstream
 QPushButton:hover {
     background: #20243a;
     color: #f4f7fb;
+=======
+QPushButton:hover:!checked {
+    background: #edf8f1;
+    color: #17212b;
+>>>>>>> Stashed changes
 }
 QPushButton:pressed {
-    background: #1d2234;
+    background: #dff1e6;
 }
 QPushButton:checked {
-    background: #242b44;
-    color: #4facfe;
-    border: 1px solid #335a7f;
+    background: #e6f5ec;
+    color: #247a50;
+    border: 1px solid #b8dfc8;
 }
+<<<<<<< Updated upstream
+=======
+QPushButton:checked:hover {
+    background: #d8efdf;
+    color: #1e6843;
+    border: 1px solid #9ed0b2;
+}
+>>>>>>> Stashed changes
 """
 
 ACTION_BUTTON_STYLE = """

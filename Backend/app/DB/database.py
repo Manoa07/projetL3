@@ -2,10 +2,33 @@ from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-DATABASE_URL = "postgresql://postgres:MLkj1542....@localhost:5432/surveillance"
+
+database_file = Path(__file__).resolve()
+env_candidates = [database_file.parent.parent.parent / ".env"]
+if len(database_file.parents) > 3:
+    env_candidates.append(database_file.parents[3] / ".env")
+
+for env_file in env_candidates:
+    if env_file.exists():
+        load_dotenv(dotenv_path=env_file)
+        break
+else:
+    load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL doit être défini.")
+if not DATABASE_URL.startswith(("postgresql://", "postgresql+psycopg2://")):
+    raise RuntimeError("DATABASE_URL doit utiliser PostgreSQL.")
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"options": "-c client_encoding=UTF8"},
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 
 engine= create_engine(DATABASE_URL)

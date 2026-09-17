@@ -7,6 +7,10 @@ import pickle
 from  keras_facenet import FaceNet
 import sqlite3
 import requests
+<<<<<<< Updated upstream
+=======
+from config import API_BASE_URL, API_TIMEOUT
+>>>>>>> Stashed changes
 class SystemePresence:
     """
     Système de présence par reconnaissance faciale avec base SQLite.
@@ -38,6 +42,7 @@ class SystemePresence:
     def charger_base(self):
         """Charge les embeddings depuis la base pour la comparaison rapide."""
         try:
+<<<<<<< Updated upstream
             reponse=requests.get("http://localhost:8000/eleve/all")
             eleves=reponse.json()
             base={}
@@ -45,6 +50,21 @@ class SystemePresence:
                 nom_complet = f"{eleve['Nom_eleve']} {eleve['Prenom_eleve']} "
                 embedding=np.array(eleve["embedding"])
                 base[nom_complet]=(eleve["Numero_eleve"],embedding)
+=======
+            reponse = requests.get(
+                f"{API_BASE_URL}/eleve/embeddings",
+                timeout=API_TIMEOUT,
+            )
+            reponse.raise_for_status()
+            embeddings = reponse.json()
+            base = {}
+            for raw_id, raw_embedding in embeddings.items():
+                if raw_embedding is None:
+                    continue
+                eleve_id = int(raw_id)
+                embedding = np.asarray(raw_embedding, dtype=np.float32)
+                base[str(eleve_id)] = (eleve_id, embedding)
+>>>>>>> Stashed changes
             return base
         except Exception as e:
             print(e)
@@ -95,9 +115,16 @@ class SystemePresence:
             "status":"present"
         }
         try:
+<<<<<<< Updated upstream
             reponse=requests.post(
                 "http://localhost:8000/presence/create",
                 json=data
+=======
+            reponse = requests.post(
+                f"{API_BASE_URL}/presence/create",
+                json=data,
+                timeout=API_TIMEOUT,
+>>>>>>> Stashed changes
             )
             if reponse.status_code==200:
                 print(f"Presence enregistrée pour {nom_complet}")
@@ -199,9 +226,16 @@ class SystemePresence:
         }
         try:
             response = requests.post(
+<<<<<<< Updated upstream
             "http://localhost:8000/eleve/create",
             data=data,
             files=files
+=======
+                f"{API_BASE_URL}/eleve/create",
+                data=data,
+                files=files,
+                timeout=API_TIMEOUT,
+>>>>>>> Stashed changes
             )
             print(response.json())
         except Exception as e:

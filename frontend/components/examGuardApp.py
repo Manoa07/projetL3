@@ -9,7 +9,13 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+<<<<<<< Updated upstream
 from PyQt6.QtCore import Qt, QSize
+=======
+from PyQt6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QGraphicsOpacityEffect
+>>>>>>> Stashed changes
 
 # Importation de vos nouveaux modules séparés
 from components.icon_loader import load_icon
@@ -31,6 +37,7 @@ class ExamGuardApp(QMainWindow):
         self.central_layout.setContentsMargins(0, 0, 0, 0)
 
         self.stack = QStackedWidget()
+        self.stack.currentChanged.connect(self.animate_current_page)
 
         # --- INDEX 0 : ACCUEIL ---
         self.stack.addWidget(self.create_home_menu())
@@ -57,9 +64,20 @@ class ExamGuardApp(QMainWindow):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setContentsMargins(36, 36, 36, 36)
         layout.setSpacing(22)
+<<<<<<< Updated upstream
+=======
+        
+        pixmap = QPixmap("../image/logo_ispm.png")
+
+        logo_label = QLabel()
+        logo_label.setPixmap(pixmap)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_label.setStyleSheet("background-color: transparent;")
+        layout.addWidget(logo_label)
+>>>>>>> Stashed changes
 
         title = QLabel("GESTION DE L'INTERFACE")
-        title.setStyleSheet("font-size: 30px; font-weight: 800; color: #f4f7fb; letter-spacing: 1.6px;")
+        title.setStyleSheet("font-size: 30px; font-weight: 800; color: #17212b; letter-spacing: 1.6px;")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         btn_layout = QHBoxLayout()
@@ -67,10 +85,10 @@ class ExamGuardApp(QMainWindow):
         
         style = """
             QPushButton {
-                background-color: #161a28;
-                border: 1px solid #2a2f45;
+                background-color: #ffffff;
+                border: 1px solid #e1e7ed;
                 border-radius: 24px;
-                color: white;
+                color: #17212b;
                 font-size: 17px;
                 font-weight: 700;
                 padding: 40px 34px;
@@ -79,8 +97,8 @@ class ExamGuardApp(QMainWindow):
                 text-align: center;
             }
             QPushButton:hover {
-                background-color: #20263b;
-                border-color: #4facfe;
+                background-color: #fff2ee;
+                border-color: #2e9d68;
             }
         """
         btn_surv = QPushButton("SURVEILLANCE")
@@ -104,3 +122,17 @@ class ExamGuardApp(QMainWindow):
     def return_to_home(self):
         """Fonction de rappel utilisée par les fichiers séparés"""
         self.stack.setCurrentIndex(0)
+
+    def animate_current_page(self, index):
+        page = self.stack.widget(index)
+        if page is None:
+            return
+        effect = QGraphicsOpacityEffect(page)
+        page.setGraphicsEffect(effect)
+        animation = QPropertyAnimation(effect, b"opacity", page)
+        animation.setDuration(280)
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        page._page_animation = animation
+        animation.start()

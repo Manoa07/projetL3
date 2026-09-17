@@ -12,7 +12,7 @@ class StatsView(QWidget):
         layout.setSpacing(18)
         
         # Titre de la section basé sur les objectifs du projet 
-        title = QLabel("<b style='color:#f4f7fb; font-size:18px; letter-spacing: 1px;'>SUIVI PRÉSENCE</b>")
+        title = QLabel("<b style='color:#17212b; font-size:18px; letter-spacing: 1px;'>SUIVI PRÉSENCE</b>")
         layout.addWidget(title)
         
         # 1. Cartes de statistiques (KPI) pour une lecture rapide 
@@ -29,8 +29,8 @@ class StatsView(QWidget):
         presence_frame = QFrame()
         presence_frame.setStyleSheet("""
             QFrame {
-                background-color: #151826;
-                border: 1px solid #23283d;
+                background-color: #ffffff;
+                border: 1px solid #e4e9ef;
                 border-radius: 14px;
                 padding: 20px;
             }
@@ -40,7 +40,7 @@ class StatsView(QWidget):
         presence_vbox.setContentsMargins(6, 6, 6, 6)
         presence_vbox.setSpacing(14)
         section_title = QLabel("Présence par section")
-        section_title.setStyleSheet("color: #f4f7fb; font-weight: 700;")
+        section_title.setStyleSheet("color: #17212b; font-weight: 700;")
         presence_vbox.addWidget(section_title)
         
         # Simulation de données pour différentes sections de l'ISPM [cite: 19, 23]
@@ -61,7 +61,7 @@ class StatsView(QWidget):
             bar.setFormat(f"{count}/{total} présents")
             bar.setStyleSheet("""
                 QProgressBar { 
-                    background: #20243a; 
+                    background: #edf1f5; 
                     border-radius: 7px; 
                     height: 16px; 
                     border: none; 
@@ -70,7 +70,7 @@ class StatsView(QWidget):
                     font-size: 10px;
                 } 
                 QProgressBar::chunk { 
-                    background: #4facfe; 
+                    background: #2e9d68; 
                     border-radius: 7px; 
                 }
             """)

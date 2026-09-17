@@ -43,7 +43,15 @@ def create_salle(db: Session, data: SalleCreate):
 
 def update_salle(db: Session, salle_id: int, data: SalleCreate):
     value = get_salle(db, salle_id)
-    value.nom_salle = data.nom_salle.strip()
+    name = data.nom_salle.strip()
+    duplicate = db.query(Salle).filter(
+        Salle.nom_salle == name,
+        Salle.id_salle != salle_id,
+    ).first()
+    if duplicate:
+        raise HTTPException(status_code=409, detail="Salle déjà existante")
+
+    value.nom_salle = name
     try:
         db.commit()
         db.refresh(value)
@@ -63,6 +71,13 @@ def delete_salle(db: Session, salle_id: int):
     try:
         db.delete(value)
         db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        logger.error("Salle référencée lors de la suppression", exc_info=error)
+        raise HTTPException(
+            status_code=409,
+            detail="La salle est utilisée par un cours ou un examen.",
+        ) from error
     except Exception as error:
         db.rollback()
         logger.error("Erreur lors de la suppression de la salle", exc_info=error)

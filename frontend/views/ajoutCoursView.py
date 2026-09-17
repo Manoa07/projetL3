@@ -1,81 +1,52 @@
+from PyQt6.QtCore import QDate, QTime, Qt
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel, QMessageBox,
-    QDateEdit, QTimeEdit, QComboBox,
+    QComboBox,
+    QDateEdit,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTimeEdit,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QDate, QTime
 import requests
-from config import API_BASE_URL
+
 from components.icon_loader import load_icon
+from config import API_BASE_URL, API_TIMEOUT
 from services.events import global_signals
 
-# Style commun pour les QTimeEdit
+
 _TIME_STYLE = """
-    QTimeEdit {
-        padding: 10px 12px;
-        border: 1px solid #23283d;
-        border-radius: 10px;
-        background-color: #151826;
-        color: #f4f7fb;
-        font-size: 14px;
-        min-width: 400px;
-    }
-    QTimeEdit:focus {
-        border: 1px solid #4facfe;
-    }
-    QTimeEdit::up-button {
-        subcontrol-origin: border;
-        subcontrol-position: top right;
-        width: 22px;
-        border-left: 1px solid #23283d;
-        border-bottom: 1px solid #23283d;
-        border-top-right-radius: 10px;
-        background-color: #1a1f2f;
-    }
-    QTimeEdit::up-button:hover  { background-color: #2a304b; }
-    QTimeEdit::down-button {
-        subcontrol-origin: border;
-        subcontrol-position: bottom right;
-        width: 22px;
-        border-left: 1px solid #23283d;
-        border-bottom-right-radius: 10px;
-        background-color: #1a1f2f;
-    }
-    QTimeEdit::down-button:hover { background-color: #2a304b; }
-    QTimeEdit::up-arrow   { image: none; width: 0; height: 0;
-                            border-left: 5px solid transparent;
-                            border-right: 5px solid transparent;
-                            border-bottom: 6px solid #4facfe; }
-    QTimeEdit::down-arrow { image: none; width: 0; height: 0;
-                            border-left: 5px solid transparent;
-                            border-right: 5px solid transparent;
-                            border-top: 6px solid #4facfe; }
+QTimeEdit {
+    padding: 10px 12px;
+    border: 1px solid #d8e0e8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #17212b;
+    min-width: 400px;
+}
+QTimeEdit:focus { border: 1px solid #2e9d68; }
+QTimeEdit::up-button, QTimeEdit::down-button {
+    width: 22px;
+    background: #f6f8fb;
+    border-left: 1px solid #d8e0e8;
+}
+QTimeEdit::up-button:hover, QTimeEdit::down-button:hover { background: #dff1e6; }
 """
 
 
-def make_time_edit() -> QTimeEdit:
-    """
-    QTimeEdit avec saisie section par section native.
-
-    Comportement :
-    - Affiche '--:--' au départ (QTime() invalide)
-    - Le ':' est fixe, infranchissable au clavier
-    - Saisie chiffre par chiffre : 2 chiffres saisis → passage auto à la section suivante
-    - Effacer (Delete/Backspace) remet '--' sur la section active, pas le ':'
-    - Flèches haut/bas incrémentent/décrémentent la section active
-    - Plage 00:00–23:59 respectée automatiquement par Qt
-    """
+# Keep time inputs consistent across course and exam forms.
+def make_time_edit():
     field = QTimeEdit()
-    # On utilise le format natif avec sections : Qt gère tout automatiquement.
-    # QTime() (invalide) → Qt affiche '--' dans chaque section tant que
-    # l'utilisateur n'a pas saisi de valeur. C'est le comportement natif
-    # sans setSpecialValueText qui casse la navigation.
     field.setDisplayFormat("HH:mm")
     field.setMinimumTime(QTime(0, 0))
     field.setMaximumTime(QTime(23, 59))
-    # QTime() invalide → sections affichent '--' nativement
     field.setTime(QTime())
     field.setStyleSheet(_TIME_STYLE)
-    field.setMinimumWidth(400)
     return field
 
 
@@ -88,7 +59,7 @@ class AjoutCoursView(QWidget):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
 
-        title = QLabel("<h2 style='color: #f4f7fb;'>AJOUT COURS</h2>")
+        title = QLabel("<h2 style='color:#17212b;'>AJOUT COURS</h2>")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.input_nom = self.create_input("Nom du cours")
@@ -96,96 +67,118 @@ class AjoutCoursView(QWidget):
         self.input_date.setCalendarPopup(True)
         self.input_date.setDisplayFormat("dd/MM/yyyy")
         self.input_debut = make_time_edit()
-        self.input_fin   = make_time_edit()
-
-        self.input_prof    = QComboBox()
-        self.input_salle   = QComboBox()
+        self.input_fin = make_time_edit()
+        self.input_prof = QComboBox()
+        self.input_salle = QComboBox()
         self.input_matiere = QComboBox()
-        _combo_style = """
-            QComboBox { padding: 10px; border: 1px solid #23283d;
-                        border-radius: 10px; background-color: #151826; color: #f4f7fb; }
-            QComboBox::drop-down { border: none; background-color: #151826; }
-            QComboBox QAbstractItemView { background-color: #151826; color: #f4f7fb;
-                                          selection-background-color: #2a304b;
-                                          selection-color: #ffffff; border: 1px solid #23283d; }
+
+        combo_style = """
+        QComboBox { padding: 10px; border: 1px solid #d8e0e8;
+            border-radius: 10px; background: #ffffff; color: #17212b; }
+        QComboBox::drop-down { border: none; background: #ffffff; }
+        QComboBox QAbstractItemView { background: #ffffff; color: #17212b;
+            selection-background-color: #dff1e6; border: 1px solid #d8e0e8; }
         """
         for field, placeholder in (
-            (self.input_prof,    "Choisir un professeur"),
-            (self.input_salle,   "Choisir une salle"),
+            (self.input_prof, "Choisir un professeur"),
+            (self.input_salle, "Choisir une salle"),
             (self.input_matiere, "Choisir une matière"),
         ):
             field.setPlaceholderText(placeholder)
             field.setMinimumWidth(400)
-            field.setStyleSheet(_combo_style)
+            field.setStyleSheet(combo_style)
 
-        for label, widget in (
-            ("Nom du cours",   self.input_nom),
-            ("Date du cours",  self.input_date),
+        for label, field in (
+            ("Nom du cours", self.input_nom),
+            ("Date du cours", self.input_date),
             ("Heure de début", self.input_debut),
-            ("Heure de fin",   self.input_fin),
-            ("Professeur",     self.input_prof),
-            ("Salle",          self.input_salle),
-            ("Matière",        self.input_matiere),
+            ("Heure de fin", self.input_fin),
+            ("Professeur", self.input_prof),
+            ("Salle", self.input_salle),
+            ("Matière", self.input_matiere),
         ):
             layout.addWidget(QLabel(label))
-            layout.addWidget(widget)
+            layout.addWidget(field)
 
-        btn_save = QPushButton("ENREGISTRER LE COURS")
-        btn_save.setIcon(load_icon("course"))
-        btn_save.setFixedSize(300, 40)
-        btn_save.setStyleSheet(
-            """ 
-              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
-              QPushButton:hover{ background-color: #052613;}
-            """
+        self.btn_save = QPushButton("ENREGISTRER LE COURS")
+        self.btn_save.setIcon(load_icon("course"))
+        self.btn_save.setFixedSize(300, 40)
+        self.btn_save.setStyleSheet(
+            "QPushButton { background:#2e9d68; color:white; font-weight:700; "
+            "border-radius:12px; padding:6px 12px; }"
+            "QPushButton:hover { background:#247a50; }"
         )
-        btn_save.clicked.connect(self.submit_cours)
-        layout.addWidget(btn_save, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.btn_save.clicked.connect(self.submit_cours)
+        layout.addWidget(self.btn_save, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        refresh = QPushButton("↻ Actualiser les référentiels")
+        refresh = QPushButton("Actualiser les référentiels")
         refresh.clicked.connect(self.load_references)
         layout.addWidget(refresh, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.status = QLabel("Chargement des référentiels…")
-        self.status.setStyleSheet("color: #8b93a7; font-style: italic;")
+        self.status = QLabel("Chargement des référentiels...")
+        self.status.setStyleSheet("color:#718096; font-style:italic;")
         layout.addWidget(self.status, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.cours_table = QTableWidget(0, 8)
+        self.cours_table.setHorizontalHeaderLabels(
+            ["ID", "Nom", "Date", "Heure début", "Heure fin", "Salle", "Matière", "Actions"]
+        )
+        layout.addWidget(self.cours_table)
         layout.addStretch()
 
+        self.editing_cours_id = None
         self.load_references()
+        self.load_cours()
         global_signals.data_changed.connect(self.load_references)
+        global_signals.data_changed.connect(self.load_cours)
 
-    # ------------------------------------------------------------------
     def create_input(self, placeholder):
         field = QLineEdit()
         field.setPlaceholderText(placeholder)
         field.setFixedWidth(400)
         field.setStyleSheet(
-            "QLineEdit { padding: 12px; border: 1px solid #23283d; "
-            "border-radius: 10px; background: #151826; color: white; }"
+            "QLineEdit { padding:12px; border:1px solid #d8e0e8; "
+            "border-radius:10px; background:#ffffff; color:#17212b; }"
+            "QLineEdit:focus { border:1px solid #2e9d68; }"
         )
         return field
 
     def load_references(self):
         endpoints = (
-            (self.input_prof,    "professeur/all",
-             lambda i: f"{i['nom_professeur']} {i['prenom_professeur']} — {i['matricule_professeur']}",
-             "id_professeur"),
-            (self.input_salle,   "salle/all",    lambda i: i["nom_salle"],    "id_salle"),
-            (self.input_matiere, "matiere/all",  lambda i: i["nom_matiere"],  "id_matiere"),
+            (self.input_prof, "professeur/all", lambda item: f"{item['nom_professeur']} {item['prenom_professeur']}", "id_professeur"),
+            (self.input_salle, "salle/all", lambda item: item["nom_salle"], "id_salle"),
+            (self.input_matiere, "matiere/all", lambda item: item["nom_matiere"], "id_matiere"),
         )
         try:
             for field, endpoint, label_fn, identifier in endpoints:
-                response = requests.get(f"{API_BASE_URL}/{endpoint}", timeout=5)
+                response = requests.get(f"{API_BASE_URL}/{endpoint}", timeout=API_TIMEOUT)
                 response.raise_for_status()
                 field.clear()
-                field.addItem("— Sélectionner —", None)
+                field.addItem("-- Sélectionner --", None)
                 for item in response.json():
                     field.addItem(label_fn(item), item[identifier])
             self.status.setText("Référentiels disponibles")
-            self.status.setStyleSheet("color: #2ecc71;")
         except (requests.RequestException, KeyError, TypeError):
-            self.status.setText("Référentiels indisponibles — démarrez le backend puis actualisez")
-            self.status.setStyleSheet("color: #f39c12;")
+            self.status.setText("Référentiels indisponibles")
+
+    def load_cours(self):
+        try:
+            response = requests.get(f"{API_BASE_URL}/cours/all", timeout=API_TIMEOUT)
+            response.raise_for_status()
+            self.cours_table.setRowCount(0)
+            for row, item in enumerate(response.json()):
+                self.cours_table.insertRow(row)
+                values = (
+                    item.get("Id_cours", item.get("id_cours", "")),
+                    item.get("nom_cours", item.get("Nom_cours", "")),
+                    item.get("date_cours", ""), item.get("heure_debut_cours", ""),
+                    item.get("heure_fin_cours", ""), item.get("id_salle_salle", ""),
+                    item.get("id_matiere_matiere", ""),
+                )
+                for column, value in enumerate(values):
+                    self.cours_table.setItem(row, column, QTableWidgetItem(str(value)))
+        except requests.RequestException:
+            self.status.setText("Impossible de charger les cours")
 
     def submit_cours(self):
         # QTime() invalide = l'utilisateur n'a pas saisi d'heure
@@ -195,38 +188,22 @@ class AjoutCoursView(QWidget):
             return
 
         data = {
-            "nom_cours":               self.input_nom.text().strip(),
-            "date_cours":              self.input_date.date().toString("yyyy-MM-dd"),
-            "heure_debut_cours":       self.input_debut.time().toString("HH:mm:ss"),
-            "heure_fin_cours":         self.input_fin.time().toString("HH:mm:ss"),
-            "id_professeur_professeur": self.input_prof.currentData(),
-            "id_salle_salle":          self.input_salle.currentData(),
-            "id_matiere_matiere":      self.input_matiere.currentData(),
+            "Nom_cours": self.input_nom.text(),
+            "Prof_cours": self.input_prof.currentData(),
+            "Salle_cours": self.input_salle.currentData(),
+            "Matiere_cours": self.input_matiere.currentData(),
         }
-        if not data["nom_cours"] or not all(
-            data[k] for k in ("id_professeur_professeur", "id_salle_salle", "id_matiere_matiere")
-        ):
-            QMessageBox.warning(self, "Erreur",
-                                "Renseignez le nom du cours et sélectionnez un professeur, une salle et une matière.")
+        if not data["Nom_cours"] or data["Prof_cours"] is None:
+            QMessageBox.warning(self, "Erreur", "Veuillez remplir les champs obligatoires.")
             return
-
+        endpoint = f"{API_BASE_URL}/cours/create"
         try:
-            response = requests.post(
-                f"{API_BASE_URL}/cours/create", json=data, timeout=10
-            )
+            response = requests.post(endpoint, json=data, timeout=API_TIMEOUT)
             if response.status_code in (200, 201):
-                QMessageBox.information(self, "Succès", "Cours ajouté avec succès !")
-                global_signals.data_changed.emit()
+                QMessageBox.information(self, "Succès", "Cours ajouté avec succès.")
                 self.input_nom.clear()
-                # Remettre '--:--' (QTime() invalide)
-                self.input_debut.setTime(QTime())
-                self.input_fin.setTime(QTime())
-                for field in (self.input_prof, self.input_salle, self.input_matiere):
-                    field.setCurrentIndex(0)
+                global_signals.data_changed.emit()
             else:
-                QMessageBox.warning(
-                    self, "Erreur",
-                    f"Impossible d'enregistrer le cours ({response.status_code}) :\n{response.text}"
-                )
+                QMessageBox.warning(self, "Erreur", response.text)
         except requests.RequestException as error:
-            QMessageBox.critical(self, "Erreur", f"Connexion serveur échouée : {error}")
+            QMessageBox.critical(self, "Erreur réseau", str(error))

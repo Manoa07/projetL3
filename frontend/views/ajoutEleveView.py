@@ -63,13 +63,13 @@ class AjoutEleveView(QWidget):
 
         container = QWidget()
         container.setObjectName("AjoutEleveContainer")
-        container.setStyleSheet("QWidget#AjoutEleveContainer { background-color: #0f111a; }")
+        container.setStyleSheet("QWidget#AjoutEleveContainer { background-color: #f6f8fb; }")
         layout = QVBoxLayout(container)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(18)
 
-        title = QLabel("<b style='color:#f4f7fb; font-size:20px; letter-spacing: 1.4px;'>AJOUT ÉLÈVE</b>")
+        title = QLabel("<b style='color:#17212b; font-size:20px; letter-spacing: 1.4px;'>AJOUT ÉLÈVE</b>")
         title.setStyleSheet("background: transparent;")
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -77,8 +77,8 @@ class AjoutEleveView(QWidget):
         form_frame.setObjectName("Card")
         form_frame.setStyleSheet("""
             QFrame#Card {
-                background-color: #151826;
-                border: 1px solid #23283d;
+                background-color: #ffffff;
+                border: 1px solid #e4e9ef;
                 border-radius: 16px;
             }
             QFrame#Card QLabel {
@@ -97,7 +97,7 @@ class AjoutEleveView(QWidget):
         # --- SECTION PHOTO ---
         form_layout.addSpacing(10)
         photo_title = QLabel("Photo")
-        photo_title.setStyleSheet("background: transparent; color: #f4f7fb; font-weight: 700;")
+        photo_title.setStyleSheet("background: transparent; color: #17212b; font-weight: 700;")
         form_layout.addWidget(photo_title)
 
         photo_section = QHBoxLayout()
@@ -105,10 +105,10 @@ class AjoutEleveView(QWidget):
         self.photo_label.setFixedSize(150, 200)
         self.photo_label.setStyleSheet("""
             QLabel {
-                border: 1px dashed #335a7f;
+                border: 1px dashed #9ed0b2;
                 border-radius: 12px;
-                background-color: #121524;
-                color: #586078;
+                background-color: #f6f8fb;
+                color: #718096;
             }
         """)
         self.photo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -118,14 +118,14 @@ class AjoutEleveView(QWidget):
         self.btn_photo.setMinimumSize(220, 50)
         self.btn_photo.setStyleSheet("""
             QPushButton {
-                background-color: #20243a;
+                background-color: #edf1f5;
                 color: #ffffff;
                 border-radius: 12px;
                 font-weight: 700;
                 font-size: 13px;
                 padding: 10px 14px;
             }
-            QPushButton:hover { background-color: #2a304b; }
+            QPushButton:hover { background-color: #dff1e6; }
         """)
         self.btn_photo.clicked.connect(self.upload_photo)
 
@@ -139,14 +139,14 @@ class AjoutEleveView(QWidget):
         self.btn_capture = QPushButton("Capturer 10 photos (auto)")
         self.btn_capture.setStyleSheet("""
             QPushButton {
-                background-color: #4facfe;
+                background-color: #2e9d68;
                 color: white;
                 padding: 12px;
                 border-radius: 12px;
                 font-weight: 700;
             }
-            QPushButton:hover { background-color: #37b8ff; }
-            QPushButton:disabled { background-color: #2a4060; color: #7a8a9a; }
+            QPushButton:hover { background-color: #247a50; }
+            QPushButton:disabled { background-color: #b8c9be; color: #ffffff; }
         """)
         # Correction : on ne bloque plus le thread Qt.
         # start_capture lance un CaptureThread en arrière-plan.
@@ -250,19 +250,19 @@ class AjoutEleveView(QWidget):
     # ------------------------------------------------------------------
     def create_input(self, layout, label_text):
         label = QLabel(label_text)
-        label.setStyleSheet("background: transparent; color: #f4f7fb; font-weight: 600; margin-top: 4px;")
+        label.setStyleSheet("background: transparent; color: #17212b; font-weight: 600; margin-top: 4px;")
         layout.addWidget(label)
         field = QLineEdit()
         field.setStyleSheet("""
             QLineEdit {
-                background-color: #121524;
+                background-color: #ffffff;
                 border: 1px solid #23283d;
                 padding: 12px;
                 border-radius: 10px;
                 color: white;
                 margin-bottom: 4px;
             }
-            QLineEdit:focus { border: 1px solid #4facfe; }
+            QLineEdit:focus { border: 1px solid #2e9d68; }
         """)
         layout.addWidget(field)
         return field

@@ -7,8 +7,8 @@ class CameraView(QFrame):
         super().__init__()
         self.setStyleSheet("""
             QFrame {
-                background-color: #0b0d14;
-                border: 1px solid #23283d;
+                background-color: #ffffff;
+                border: 1px solid #e4e9ef;
                 border-radius: 18px;
             }
         """)
@@ -18,7 +18,7 @@ class CameraView(QFrame):
         
         # Header
         header = QHBoxLayout()
-        title = QLabel(f"<b style='color:#f4f7fb; font-size:13px; letter-spacing: 1px;'>{name}</b>")
+        title = QLabel(f"<b style='color:#17212b; font-size:13px; letter-spacing: 1px;'>{name}</b>")
         header.addWidget(title)
         self.presence = QLabel("PRESENTS: --/--")
         self.presence.setStyleSheet("color: #2ecc71; font-weight: 700;")
@@ -34,7 +34,7 @@ class CameraView(QFrame):
         layout.addWidget(self.video_label)
 
         footer = QLabel(overlay_type)
-        footer.setStyleSheet("color: #7a7c8c; font-size: 10px; border: none; letter-spacing: 0.5px;")
+        footer.setStyleSheet("color: #718096; font-size: 10px; border: none; letter-spacing: 0.5px;")
         layout.addWidget(footer, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def update_frame(self, qt_image):

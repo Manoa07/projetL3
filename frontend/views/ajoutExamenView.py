@@ -1,10 +1,11 @@
 from PyQt6.QtCore import QDate, Qt, QTime
 from PyQt6.QtWidgets import (
     QComboBox, QDateEdit, QLineEdit, QTimeEdit,
-    QVBoxLayout, QLabel, QPushButton, QMessageBox, QWidget,
+    QVBoxLayout, QLabel, QPushButton, QMessageBox, QWidget, QHBoxLayout,
+    QTableWidget, QTableWidgetItem,
 )
 import requests
-from config import API_BASE_URL
+from config import API_BASE_URL, API_TIMEOUT
 from components.icon_loader import load_icon
 from services.events import global_signals
 from views.ajoutCoursView import make_time_edit   # réutilisation du même helper
@@ -64,6 +65,7 @@ class AjoutExamenView(QWidget):
         save = QPushButton("ENREGISTRER L'EXAMEN")
         save.setIcon(load_icon("course"))
         save.clicked.connect(self.submit)
+        self.btn_save = save
         save.setStyleSheet(
             """ 
               QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
@@ -80,15 +82,30 @@ class AjoutExamenView(QWidget):
         self.status = QLabel("Chargement des salles et matières…")
         self.status.setStyleSheet("color:#8b93a7; font-style:italic;")
         layout.addWidget(self.status, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.examens_table = QTableWidget(0, 8)
+        self.examens_table.setHorizontalHeaderLabels(
+            ["ID", "Date", "Heure début", "Heure fin", "Semestre",
+             "Salle", "Matière", "Actions"]
+        )
+        layout.addWidget(self.examens_table)
         layout.addStretch()
 
+        self.editing_examen_id = None
         self.load_references()
+        self.load_examens()
         global_signals.data_changed.connect(self.load_references)
+        global_signals.data_changed.connect(self.load_examens)
 
     def load_references(self):
         try:
-            sr = requests.get(f"{API_BASE_URL}/salle/all",   timeout=5)
-            mr = requests.get(f"{API_BASE_URL}/matiere/all", timeout=5)
+            sr = requests.get(
+                f"{API_BASE_URL}/salle/all",
+                timeout=API_TIMEOUT,
+            )
+            mr = requests.get(
+                f"{API_BASE_URL}/matiere/all",
+                timeout=API_TIMEOUT,
+            )
             sr.raise_for_status(); mr.raise_for_status()
             self.salle.clear();   self.salle.addItem("— Sélectionner —", None)
             self.matiere.clear(); self.matiere.addItem("— Sélectionner —", None)
@@ -101,6 +118,118 @@ class AjoutExamenView(QWidget):
         except (requests.RequestException, KeyError, TypeError):
             self.status.setText("Aucune donnée disponible — créez d'abord une salle et une matière")
             self.status.setStyleSheet("color:#f39c12;")
+
+    def _reference_label(self, field, identifier):
+        index = field.findData(identifier)
+        return field.itemText(index) if index >= 0 else str(identifier or "")
+
+    def load_examens(self):
+        try:
+            response = requests.get(
+                f"{API_BASE_URL}/examen/all",
+                timeout=API_TIMEOUT,
+            )
+            response.raise_for_status()
+            self.examens_table.setRowCount(0)
+            for row, item in enumerate(response.json()):
+                self.examens_table.insertRow(row)
+                values = (
+                    item.get("id_examen", ""),
+                    str(item.get("date_examen", ""))[:10],
+                    item.get("Heure_debut", ""),
+                    item.get("Heure_fin", ""),
+                    item.get("semestre_examen", ""),
+                    self._reference_label(
+                        self.salle, item.get("id_salle_salle")
+                    ),
+                    self._reference_label(
+                        self.matiere, item.get("id_matiere_matiere")
+                    ),
+                )
+                for column, value in enumerate(values):
+                    self.examens_table.setItem(
+                        row, column, QTableWidgetItem(str(value))
+                    )
+                actions = QWidget()
+                actions_layout = QHBoxLayout(actions)
+                actions_layout.setContentsMargins(2, 2, 2, 2)
+                update_button = QPushButton("Modifier")
+                delete_button = QPushButton("Supprimer")
+                update_button.clicked.connect(
+                    lambda checked=False, current=item: self.update_examen(current)
+                )
+                delete_button.clicked.connect(
+                    lambda checked=False, current=item: self.delete_examen(current)
+                )
+                actions_layout.addWidget(update_button)
+                actions_layout.addWidget(delete_button)
+                self.examens_table.setCellWidget(row, 7, actions)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            self.status.setText("Impossible de charger les examens.")
+            self.status.setStyleSheet("color:#f39c12;")
+        except (requests.RequestException, KeyError, TypeError, ValueError):
+            self.status.setText("Réponse invalide du serveur.")
+            self.status.setStyleSheet("color:#f39c12;")
+
+    def update_examen(self, item):
+        self.editing_examen_id = item.get("id_examen")
+        self.semestre.setText(item.get("semestre_examen") or "")
+        date_value = str(item.get("date_examen", ""))[:10]
+        parsed_date = QDate.fromString(date_value, "yyyy-MM-dd")
+        if parsed_date.isValid():
+            self.date.setDate(parsed_date)
+        for field, key in (
+            (self.debut, "Heure_debut"),
+            (self.fin, "Heure_fin"),
+        ):
+            parsed_time = QTime.fromString(str(item.get(key) or "")[:8], "HH:mm:ss")
+            if parsed_time.isValid():
+                field.setTime(parsed_time)
+        for field, key in (
+            (self.salle, "id_salle_salle"),
+            (self.matiere, "id_matiere_matiere"),
+        ):
+            index = field.findData(item.get(key))
+            if index >= 0:
+                field.setCurrentIndex(index)
+        self.btn_save.setText("MODIFIER L'EXAMEN")
+        self.status.setText("Modification en cours : validez avec le bouton ci-dessus.")
+
+    def delete_examen(self, item):
+        examen_id = item.get("id_examen")
+        reply = QMessageBox.question(
+            self,
+            "Confirmation",
+            "Voulez-vous vraiment supprimer cet examen ?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            response = requests.delete(
+                f"{API_BASE_URL}/examen/{examen_id}",
+                timeout=API_TIMEOUT,
+            )
+            if response.status_code == 204:
+                QMessageBox.information(self, "Succès", "Examen supprimé avec succès.")
+                global_signals.data_changed.emit()
+            elif response.status_code == 409:
+                QMessageBox.warning(
+                    self, "Suppression impossible",
+                    "Cet examen possède des surveillances ou présences associées.",
+                )
+            elif response.status_code == 404:
+                QMessageBox.warning(self, "Introuvable", "Cet examen n'existe plus.")
+                global_signals.data_changed.emit()
+            else:
+                QMessageBox.warning(self, "Erreur", response.text)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            QMessageBox.critical(
+                self, "Erreur Réseau",
+                "Le serveur est inaccessible ou a mis trop de temps à répondre.",
+            )
+        except requests.RequestException as error:
+            QMessageBox.critical(self, "Erreur", f"Connexion serveur échouée : {error}")
 
     def submit(self):
         # QTime() invalide = l'utilisateur n'a pas saisi d'heure
@@ -123,17 +252,42 @@ class AjoutExamenView(QWidget):
             return
 
         try:
-            response = requests.post(
-                f"{API_BASE_URL}/examen/create", json=data, timeout=10
+            method = requests.put if self.editing_examen_id else requests.post
+            endpoint = (
+                f"{API_BASE_URL}/examen/{self.editing_examen_id}"
+                if self.editing_examen_id
+                else f"{API_BASE_URL}/examen/create"
+            )
+            response = method(
+                endpoint,
+                json=data,
+                timeout=API_TIMEOUT,
             )
             if response.status_code in (200, 201):
-                QMessageBox.information(self, "Succès", "Examen ajouté avec succès.")
+                message = (
+                    "Examen modifié avec succès."
+                    if self.editing_examen_id
+                    else "Examen ajouté avec succès."
+                )
+                QMessageBox.information(self, "Succès", message)
+                self.editing_examen_id = None
+                self.btn_save.setText("ENREGISTRER L'EXAMEN")
                 self.semestre.clear()
                 # Remettre '--:--' (QTime() invalide)
                 self.debut.setTime(QTime())
                 self.fin.setTime(QTime())
                 global_signals.data_changed.emit()
+            elif response.status_code == 404:
+                QMessageBox.warning(self, "Introuvable", response.text)
+            elif response.status_code == 409:
+                QMessageBox.warning(self, "Conflit", response.text)
             else:
                 QMessageBox.warning(self, "Erreur", response.text)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            QMessageBox.critical(
+                self,
+                "Erreur Réseau",
+                "Le serveur est inaccessible ou a mis trop de temps à répondre.",
+            )
         except requests.RequestException as error:
             QMessageBox.critical(self, "Erreur", f"Connexion serveur échouée : {error}")

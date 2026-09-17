@@ -6,7 +6,7 @@ import numpy as np
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
 import requests
-from config import API_BASE_URL
+from config import API_BASE_URL, API_TIMEOUT
 
 
 class PresenceThread(QThread):
@@ -110,7 +110,7 @@ class PresenceThread(QThread):
                 f"{API_BASE_URL}/presence/detecter",
                 files={"file": ("frame.jpg", buffer.tobytes(), "image/jpeg")},
                 data={"id_cours": self.id_cours},
-                timeout=3.0,
+                timeout=API_TIMEOUT,
             )
 
             if response.status_code == 200:
@@ -149,4 +149,3 @@ class PresenceThread(QThread):
 
 # Compatibilité avec l'ancien nom mal orthographié utilisé dans l'interface.
 presenceTheard = PresenceThread
-

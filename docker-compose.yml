@@ -41,6 +41,13 @@ services:
     volumes:
       - ./Backend/app/upload/eleve_upload:/app/upload/eleve_upload
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    develop:
+      watch:
+        - action: sync
+          path: ./Backend/app
+          target: /app
+        - action: rebuild
+          path: ./requirements-backend.txt
 
   frontend:
     build:
@@ -58,6 +65,13 @@ services:
       - ./frontend/models:/app/models:ro
     stdin_open: true
     tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./frontend
+          target: /app
+        - action: rebuild
+          path: ./requirements-frontend.txt
 
 volumes:
   pg_data:

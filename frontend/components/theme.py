@@ -1,20 +1,20 @@
 APP_STYLESHEET = """
 QWidget {
-    color: #f4f7fb;
+    color: #172033;
     font-family: 'Segoe UI';
     font-size: 12px;
 }
 
 QMainWindow {
-    background-color: #0f111a;
+    background-color: #f5f7fb;
 }
 
 QFrame#Sidebar,
 QFrame#AlertsPanel,
 QFrame#Card {
-    background-color: #151826;
-    border: 1px solid #23283d;
-    border-radius: 16px;
+    background-color: #ffffff;
+    border: 1px solid #e5eaf2;
+    border-radius: 14px;
 }
 
 QPushButton {
@@ -30,9 +30,9 @@ QLineEdit, QComboBox, QDateEdit, QTimeEdit, QTableWidget, QProgressBar {
 }
 
 QComboBox, QDateEdit, QTimeEdit {
-    background-color: #151826;
-    color: #f4f7fb;
-    border: 1px solid #23283d;
+    background-color: #ffffff;
+    color: #172033;
+    border: 1px solid #d8e0ec;
     border-radius: 10px;
     padding: 10px;
 }
@@ -53,13 +53,13 @@ QDateEdit:focus, QTimeEdit:focus, QComboBox:focus {
 
 QCalendarWidget QToolButton,
 QCalendarWidget QSpinBox {
-    background-color: #151826;
-    color: #f4f7fb;
+    background-color: #ffffff;
+    color: #172033;
 }
 
 QCalendarWidget QAbstractItemView:enabled {
-    background-color: #151826;
-    color: #f4f7fb;
+    background-color: #ffffff;
+    color: #172033;
 }
 """
 
@@ -67,39 +67,44 @@ NAV_BUTTON_STYLE = """
 QPushButton {
     background: transparent;
     border: 1px solid transparent;
-    color: #7a7c8c;
+    color: #718096;
     font-size: 11px;
     font-weight: 600;
-    padding: 12px 8px;
-    border-radius: 14px;
+    padding: 10px 8px;
+    border-radius: 10px;
     text-align: center;
 }
 QPushButton:hover:!checked {
-    background: #20243a;
-    color: #f4f7fb;
+    background: #edf5ff;
+    color: #1769d2;
 }
 QPushButton:pressed {
-    background: #1d2234;
+    background: #dcecff;
 }
 QPushButton:checked {
-    background: #242b44;
-    color: #4facfe;
-    border: 1px solid #335a7f;
+    background: #e7f1ff;
+    color: #1769d2;
+    border: 1px solid #bed9ff;
 }
 QPushButton:checked:hover {
-    background: #2d3555;
-    color: #4facfe;
-    border: 1px solid #335a7f;
+    background: #dcecff;
+    color: #1769d2;
+    border: 1px solid #a8ccff;
 }
 """
 
 ACTION_BUTTON_STYLE = """
 QPushButton {
-    border-radius: 12px;
+    background: #1769d2;
+    color: #ffffff;
+    border-radius: 10px;
     font-weight: 700;
     padding: 12px 16px;
 }
 QPushButton:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: #0f58b7;
+}
+QPushButton:pressed {
+    background: #0b4694;
 }
 """

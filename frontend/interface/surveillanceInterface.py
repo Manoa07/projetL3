@@ -10,7 +10,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QSize
+from PyQt6.QtWidgets import QGraphicsOpacityEffect
 from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
 from views.liveView import LiveView
@@ -36,8 +37,8 @@ class SurveillanceInterface(QWidget):
         self.sidebar.setFixedWidth(140)
         self.sidebar.setStyleSheet("""
             QFrame#Sidebar {
-                background-color: #151826;
-                border-right: 1px solid #24273d;
+                background-color: #ffffff;
+                border-right: 1px solid #e5eaf2;
             }
         """)
         sidebar_layout = QVBoxLayout(self.sidebar)
@@ -56,7 +57,7 @@ class SurveillanceInterface(QWidget):
 
         btn_back = QPushButton("Accueil")
         btn_back.setIcon(load_icon("home"))
-        btn_back.setStyleSheet("color: #e74c3c; padding: 14px; font-weight: 700; border-radius: 12px;")
+        btn_back.setStyleSheet("color: #e05555; padding: 14px; font-weight: 700; border-radius: 10px;")
         btn_back.clicked.connect(self.back_to_home)
         sidebar_layout.addWidget(btn_back)
 
@@ -79,7 +80,7 @@ class SurveillanceInterface(QWidget):
         self.start_btn = QPushButton("LANCER LA SURVEILLANCE")
         self.start_btn.setIcon(load_icon("play"))
         self.start_btn.setFixedSize(280, 60)
-        self.start_btn.setStyleSheet("background: #e74c3c; color: white; font-weight: 700; border-radius: 12px; padding: 12px 16px;")
+        self.start_btn.setStyleSheet("background: #e05555; color: white; font-weight: 700; border-radius: 10px; padding: 12px 16px;")
         self.start_btn.clicked.connect(self.start_live_monitoring)
         placeholder_layout.addStretch()
         placeholder_layout.addWidget(self.start_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -103,7 +104,7 @@ class SurveillanceInterface(QWidget):
             self.stop_btn = QPushButton("ARRÊTER LA SURVEILLANCE")
             self.stop_btn.setIcon(load_icon("stop"))
             self.stop_btn.setFixedWidth(250)
-            self.stop_btn.setStyleSheet("background: #34495e; color: white; padding: 12px 16px; border-radius: 12px;")
+            self.stop_btn.setStyleSheet("background: #40516a; color: white; padding: 12px 16px; border-radius: 10px;")
             self.stop_btn.clicked.connect(self.stop_live_monitoring)
             container_layout.addWidget(self.stop_btn, alignment=Qt.AlignmentFlag.AlignCenter)
             container_layout.addStretch()
@@ -151,15 +152,15 @@ class SurveillanceInterface(QWidget):
         alerts_panel.setFixedWidth(300)
         alerts_panel.setStyleSheet("""
             QFrame#AlertsPanel {
-                background-color: #151826;
-                border-left: 1px solid #24273d;
+                background-color: #ffffff;
+                border-left: 1px solid #e5eaf2;
             }
         """)
         alerts_layout = QVBoxLayout(alerts_panel)
         alerts_layout.setContentsMargins(14, 16, 14, 14)
         alerts_layout.setSpacing(12)
         title = QLabel("<b>FIL D'ALERTES</b>")
-        title.setStyleSheet("color: #f4f7fb; margin-bottom: 8px; font-size: 13px; letter-spacing: 1px;")
+        title.setStyleSheet("color: #172033; margin-bottom: 8px; font-size: 13px; letter-spacing: 1px;")
         alerts_layout.addWidget(title)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -181,3 +182,13 @@ class SurveillanceInterface(QWidget):
         if hasattr(self, 'alert_scroll_layout'):
             new_card = AlertCard(message, time_str, critical=True)
             self.alert_scroll_layout.insertWidget(0, new_card)
+            effect = QGraphicsOpacityEffect(new_card)
+            new_card.setGraphicsEffect(effect)
+            animation = QPropertyAnimation(effect, b"opacity", new_card)
+            animation.setDuration(320)
+            animation.setStartValue(0.0)
+            animation.setEndValue(1.0)
+            animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+            animation.finished.connect(lambda: new_card.setGraphicsEffect(None))
+            animation.start()
+            self.alert_animation = animation

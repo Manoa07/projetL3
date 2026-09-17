@@ -41,8 +41,8 @@ class PresenceInterface(QWidget):
         self.sidebar.setFixedWidth(155)
         self.sidebar.setStyleSheet("""
             QFrame#Sidebar {
-                background-color: #151826;
-                border-right: 1px solid #24273d;
+                background-color: #ffffff;
+                border-right: 1px solid #e5eaf2;
             }
         """)
         sidebar_layout = QVBoxLayout(self.sidebar)
@@ -67,7 +67,7 @@ class PresenceInterface(QWidget):
 
         btn_back = QPushButton("Accueil")
         btn_back.setIcon(load_icon("home"))
-        btn_back.setStyleSheet("color: #e74c3c; padding: 14px; font-weight: 700; border-radius: 12px;")
+        btn_back.setStyleSheet("color: #e05555; padding: 14px; font-weight: 700; border-radius: 10px;")
         btn_back.clicked.connect(self.handle_back_home)
         sidebar_layout.addWidget(btn_back)
 
@@ -113,7 +113,7 @@ class PresenceInterface(QWidget):
         placeholder_layout.setContentsMargins(24, 24, 24, 24)
         placeholder_layout.setSpacing(16)
 
-        title = QLabel("<b style='color:#4facfe; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
+        title = QLabel("<b style='color:#1769d2; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
         placeholder_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
 
         # BUG-14 : cours_select créé et ajouté au layout AVANT insertWidget
@@ -121,11 +121,11 @@ class PresenceInterface(QWidget):
         self.cours_select.setFixedWidth(300)
         self.cours_select.setStyleSheet("""
             QComboBox {
-                background: #1a1f2f;
-                border: 1px solid #2a2f45;
+                background: #ffffff;
+                border: 1px solid #d8e0ec;
                 border-radius: 10px;
                 padding: 10px 12px;
-                color: #f4f7fb;
+                color: #172033;
             }
             QComboBox::drop-down { border: none; }
         """)
@@ -135,14 +135,14 @@ class PresenceInterface(QWidget):
         self.start_btn.setFixedSize(300, 70)
         self.start_btn.setStyleSheet("""
             QPushButton {
-                background: #4facfe;
+                background: #1769d2;
                 color: white;
                 font-weight: 700;
                 border-radius: 12px;
                 font-size: 13px;
                 padding: 12px 16px;
             }
-            QPushButton:hover { background: #37b8ff; }
+            QPushButton:hover { background: #0f58b7; }
         """)
         self.start_btn.clicked.connect(self.start_presence_camera)
 
@@ -173,7 +173,7 @@ class PresenceInterface(QWidget):
         container_layout.setSpacing(16)
         
         running_label = QLabel("SCAN EN COURS...")
-        running_label.setStyleSheet("color:#f4f7fb; font-size:18px; font-weight:700; letter-spacing: 1px;")
+        running_label.setStyleSheet("color:#172033; font-size:18px; font-weight:700; letter-spacing: 1px;")
         container_layout.addWidget(running_label)
 
 
@@ -194,7 +194,7 @@ class PresenceInterface(QWidget):
         self.stop_btn = QPushButton("ARRÊTER LE SCAN")
         self.stop_btn.setIcon(load_icon("stop"))
         self.stop_btn.setFixedSize(200, 45)
-        self.stop_btn.setStyleSheet("background: #34495e; color: white; border-radius: 12px; padding: 12px 16px; font-weight: 700;")
+        self.stop_btn.setStyleSheet("background: #40516a; color: white; border-radius: 10px; padding: 12px 16px; font-weight: 700;")
         self.stop_btn.clicked.connect(self.stop_presence_camera)
         container_layout.addWidget(self.stop_btn, alignment=Qt.AlignmentFlag.AlignCenter)
         

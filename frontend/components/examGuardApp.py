@@ -1,6 +1,5 @@
 import sys
 from PyQt6.QtWidgets import (
-    QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -9,9 +8,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PyQt6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QGraphicsOpacityEffect
+from pathlib import Path
 
 # Importation de vos nouveaux modules séparés
 from components.icon_loader import load_icon
@@ -23,7 +22,7 @@ class ExamGuardApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Système de Surveillance Intelligent")
-        self.resize(1280, 850)
+        self.resize(1280, 800)
         self.setStyleSheet(APP_STYLESHEET)
         self.init_ui()
 
@@ -33,7 +32,6 @@ class ExamGuardApp(QMainWindow):
         self.central_layout.setContentsMargins(0, 0, 0, 0)
 
         self.stack = QStackedWidget()
-        self.stack.currentChanged.connect(self.animate_current_page)
 
         # --- INDEX 0 : ACCUEIL ---
         self.stack.addWidget(self.create_home_menu())
@@ -54,79 +52,87 @@ class ExamGuardApp(QMainWindow):
         self.setCentralWidget(container)
 
     def create_home_menu(self):
-        """Crée l'interface avec les 2 gros boutons"""
+        """Crée l'accueil avec le logo et les deux modes de travail."""
         home_widget = QWidget()
+        home_widget.setObjectName("HomePage")
+        home_widget.setStyleSheet("""
+            QWidget#HomePage {
+                background: #f6f8fb;
+            }
+        """)
         layout = QVBoxLayout(home_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setContentsMargins(36, 36, 36, 36)
-        layout.setSpacing(22)
-
-        
-        pixmap = QPixmap("../image/logo_ispm.png")
+        layout.setSpacing(16)
 
         logo_label = QLabel()
-        logo_label.setPixmap(pixmap)
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_label.setStyleSheet("background-color: transparent;")
+        logo_path = Path(__file__).resolve().parents[2] / "image" / "logo.png"
+        logo = QPixmap(str(logo_path))
+        logo_label.setPixmap(logo.scaled(190, 190, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        logo_label.setStyleSheet("background: transparent; padding: 4px;")
         layout.addWidget(logo_label)
 
-        title = QLabel("GESTION DE L'INTERFACE")
-        title.setStyleSheet("font-size: 30px; font-weight: 800; color: #17212b; letter-spacing: 1.6px;")
-        layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
+        title = QLabel("SYSTÈME DE SURVEILLANCE INTELLIGENTE")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("color: #17212b; font-size: 24px; font-weight: 800; letter-spacing: 1px;")
+        layout.addWidget(title)
+
+        subtitle = QLabel("Choisissez le mode de fonctionnement")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setStyleSheet("color: #718096; font-size: 13px; font-weight: 600;")
+        layout.addWidget(subtitle)
 
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(20)
-        
         style = """
             QPushButton {
-                background-color: #ffffff;
-                border: 1px solid #e1e7ed;
-                border-radius: 24px;
+                background: #ffffff;
+                border: 1px solid #e4e9ef;
+                border-radius: 16px;
                 color: #17212b;
-                font-size: 17px;
-                font-weight: 700;
-                padding: 40px 34px;
-                min-width: 250px;
-                min-height: 170px;
-                text-align: center;
+                font-size: 16px;
+                font-weight: 800;
+                padding: 22px 24px;
+                min-width: 190px;
+                min-height: 76px;
             }
             QPushButton:hover {
-                background-color: #fff2ee;
-                border-color: #2e9d68;
+                background: #eef1f5;
+                border: 1px solid #243447;
+                color: #243447;
+            }
+            QPushButton:pressed {
+                background: #dfe5eb;
             }
         """
         btn_surv = QPushButton("SURVEILLANCE")
         btn_surv.setIcon(load_icon("live"))
         btn_surv.setIconSize(QSize(24, 24))
+        btn_surv.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_surv.setStyleSheet(style)
         btn_surv.clicked.connect(lambda: self.stack.setCurrentIndex(1))
 
         btn_pres = QPushButton("PRÉSENCE")
         btn_pres.setIcon(load_icon("users"))
         btn_pres.setIconSize(QSize(24, 24))
+        btn_pres.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_pres.setStyleSheet(style)
         btn_pres.clicked.connect(lambda: self.stack.setCurrentIndex(2))
 
         btn_layout.addWidget(btn_surv)
         btn_layout.addWidget(btn_pres)
-        
         layout.addLayout(btn_layout)
+
+        footer = QLabel("S.S.I  •  PLATEFORME DE SUPERVISION EN TEMPS RÉEL")
+        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer.setStyleSheet("color: #718096; font-size: 10px; font-weight: 700; letter-spacing: 1px;")
+        layout.addSpacing(12)
+        layout.addWidget(footer)
+
         return home_widget
 
     def return_to_home(self):
         """Fonction de rappel utilisée par les fichiers séparés"""
         self.stack.setCurrentIndex(0)
 
-    def animate_current_page(self, index):
-        page = self.stack.widget(index)
-        if page is None:
-            return
-        effect = QGraphicsOpacityEffect(page)
-        page.setGraphicsEffect(effect)
-        animation = QPropertyAnimation(effect, b"opacity", page)
-        animation.setDuration(280)
-        animation.setStartValue(0.0)
-        animation.setEndValue(1.0)
-        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        page._page_animation = animation
-        animation.start()

@@ -12,13 +12,13 @@ class StatsView(QWidget):
         layout.setSpacing(18)
         
         # Titre de la section basé sur les objectifs du projet 
-        title = QLabel("<b style='color:#17212b; font-size:18px; letter-spacing: 1px;'>SUIVI PRÉSENCE</b>")
+        title = QLabel("<b style='color:#17212b; font-size:18px; letter-spacing: 1px;'>SUIVI DES PRÉSENCES</b>")
         layout.addWidget(title)
         
         # 1. Cartes de statistiques (KPI) pour une lecture rapide 
         kpi_layout = QHBoxLayout()
         # Taux de présence global calculé par l'IA 
-        kpi_layout.addWidget(StatCard("Taux", "96%", "#2ecc71"))
+        kpi_layout.addWidget(StatCard("Taux", "96%", "#243447"))
         # Nombre d'élèves absents détectés 
         kpi_layout.addWidget(StatCard("Absents", "1 / 25", "#e74c3c"))
         # Retardataires identifiés après l'horaire précis [cite: 8]
@@ -39,7 +39,7 @@ class StatsView(QWidget):
         presence_vbox = QVBoxLayout(presence_frame)
         presence_vbox.setContentsMargins(6, 6, 6, 6)
         presence_vbox.setSpacing(14)
-        section_title = QLabel("Présence par section")
+        section_title = QLabel("Présences par section")
         section_title.setStyleSheet("color: #17212b; font-weight: 700;")
         presence_vbox.addWidget(section_title)
         
@@ -61,7 +61,7 @@ class StatsView(QWidget):
             bar.setFormat(f"{count}/{total} présents")
             bar.setStyleSheet("""
                 QProgressBar { 
-                    background: #edf1f5; 
+                    background: #edf1f5;
                     border-radius: 7px; 
                     height: 16px; 
                     border: none; 
@@ -70,7 +70,7 @@ class StatsView(QWidget):
                     font-size: 10px;
                 } 
                 QProgressBar::chunk { 
-                    background: #2e9d68; 
+                    background: #243447;
                     border-radius: 7px; 
                 }
             """)

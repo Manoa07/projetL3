@@ -2,11 +2,12 @@ from PyQt6.QtCore import QDate, Qt, QTime
 from PyQt6.QtWidgets import (
     QComboBox, QDateEdit, QLineEdit, QTimeEdit,
     QVBoxLayout, QLabel, QPushButton, QMessageBox, QWidget, QHBoxLayout,
-    QTableWidget, QTableWidgetItem,
+    QTableWidget, QTableWidgetItem, QScrollArea,
 )
 import requests
 from config import API_BASE_URL, API_TIMEOUT
 from components.icon_loader import load_icon
+from components.theme import configure_table
 from services.events import global_signals
 from views.ajoutCoursView import make_time_edit   # réutilisation du même helper
 
@@ -14,7 +15,14 @@ from views.ajoutCoursView import make_time_edit   # réutilisation du même help
 class AjoutExamenView(QWidget):
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout(self)
+        page_layout = QVBoxLayout(self)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        page = QWidget()
+        layout = QVBoxLayout(page)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
         layout.addWidget(
@@ -32,6 +40,30 @@ class AjoutExamenView(QWidget):
 
         self.date = QDateEdit(QDate.currentDate())
         self.date.setCalendarPopup(True)
+        self.date.setStyleSheet("""
+            QDateEdit {
+                padding: 10px;
+                border: 1px solid #d8e0e8;
+                border-radius: 10px;
+                background: #ffffff;
+                color: #17212b;
+            }
+            QCalendarWidget, QCalendarWidget QWidget,
+            QCalendarWidget QTableView,
+            QCalendarWidget QHeaderView::section {
+                background: #ffffff;
+                color: #17212b;
+            }
+            QCalendarWidget QTableView {
+                selection-background-color: #243447;
+                selection-color: #ffffff;
+            }
+            QCalendarWidget QToolButton {
+                background: #ffffff;
+                color: #17212b;
+                border: none;
+            }
+        """)
 
         # QTimeEdit correctement configuré : flèches visibles, '--:--' par défaut
         self.debut = make_time_edit()
@@ -44,7 +76,7 @@ class AjoutExamenView(QWidget):
                         border-radius: 10px; background-color: #ffffff; color: #17212b; }
             QComboBox::drop-down { border: none; background-color: #ffffff; }
             QComboBox QAbstractItemView { background-color: #ffffff; color: #17212b;
-                                          selection-background-color: #dff1e6;
+                                          selection-background-color: #dfe5eb;
                                           selection-color: #ffffff; border: 1px solid #23283d; }
         """
         for field in (self.salle, self.matiere):
@@ -68,14 +100,20 @@ class AjoutExamenView(QWidget):
         self.btn_save = save
         save.setStyleSheet(
             """ 
-              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
-              QPushButton:hover{ background-color: #247a50;}
+              QPushButton { background: #243447; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
+              QPushButton:hover{ background-color: #1b2838;}
             """
         )
         save.setFixedSize(300, 40)
         layout.addWidget(save, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        refresh = QPushButton("↻ Actualiser les salles et matières")
+        refresh = QPushButton("Actualiser les salles et matières")
+        refresh.setIcon(load_icon("refresh"))
+        refresh.setStyleSheet(
+            "QPushButton { background:#e8f0ff; color:#2459bd; font-weight:700; "
+            "border:1px solid #bdd0f7; border-radius:10px; padding:8px 14px; }"
+            "QPushButton:hover { background:#dbe7ff; }"
+        )
         refresh.clicked.connect(self.load_references)
         layout.addWidget(refresh, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -84,11 +122,15 @@ class AjoutExamenView(QWidget):
         layout.addWidget(self.status, alignment=Qt.AlignmentFlag.AlignCenter)
         self.examens_table = QTableWidget(0, 8)
         self.examens_table.setHorizontalHeaderLabels(
-            ["ID", "Date", "Heure début", "Heure fin", "Semestre",
+            ["ID", "Date", "Heure de début", "Heure de fin", "Semestre",
              "Salle", "Matière", "Actions"]
         )
+        configure_table(self.examens_table)
         layout.addWidget(self.examens_table)
         layout.addStretch()
+        page.setMinimumWidth(700)
+        scroll.setWidget(page)
+        page_layout.addWidget(scroll)
 
         self.editing_examen_id = None
         self.load_references()
@@ -114,7 +156,7 @@ class AjoutExamenView(QWidget):
             for item in mr.json():
                 self.matiere.addItem(item["nom_matiere"], item["id_matiere"])
             self.status.setText("Salles et matières disponibles")
-            self.status.setStyleSheet("color:#2ecc71;")
+            self.status.setStyleSheet("color:#243447;")
         except (requests.RequestException, KeyError, TypeError):
             self.status.setText("Aucune donnée disponible — créez d'abord une salle et une matière")
             self.status.setStyleSheet("color:#f39c12;")

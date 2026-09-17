@@ -1,0 +1,36 @@
+# =============================================================================
+# requirements.txt — projetL3 (Système de surveillance vidéo & présence)
+# =============================================================================
+# Installation:
+#   pip install -r requirements.txt
+#
+# Ce fichier regroupe l'ensemble des dépendances nécessaires au backend
+# (FastAPI) et au frontend (PyQt6).
+# =============================================================================
+
+# ---- Backend : API FastAPI --------------------------------------------------
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+pydantic
+python-multipart
+python-dotenv
+
+# ---- Backend & Frontend : vision par ordinateur -----------------------------
+opencv-python
+numpy
+mtcnn
+keras-facenet
+# TensorFlow is required by mtcnn and keras-facenet for face embeddings.
+tensorflow>=2.21; python_version < "3.14"
+scikit-learn
+joblib
+
+# ---- Frontend : interface graphique PyQt6 -------------------------------------
+PyQt6
+qasync
+requests
+httpx
+mediapipe
+ultralytics>=8.3.0,<9

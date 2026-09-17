@@ -9,13 +9,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-<<<<<<< Updated upstream
-from PyQt6.QtCore import Qt, QSize
-=======
 from PyQt6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QGraphicsOpacityEffect
->>>>>>> Stashed changes
 
 # Importation de vos nouveaux modules séparés
 from components.icon_loader import load_icon
@@ -64,8 +60,7 @@ class ExamGuardApp(QMainWindow):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setContentsMargins(36, 36, 36, 36)
         layout.setSpacing(22)
-<<<<<<< Updated upstream
-=======
+
         
         pixmap = QPixmap("../image/logo_ispm.png")
 
@@ -74,7 +69,6 @@ class ExamGuardApp(QMainWindow):
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_label.setStyleSheet("background-color: transparent;")
         layout.addWidget(logo_label)
->>>>>>> Stashed changes
 
         title = QLabel("GESTION DE L'INTERFACE")
         title.setStyleSheet("font-size: 30px; font-weight: 800; color: #17212b; letter-spacing: 1.6px;")

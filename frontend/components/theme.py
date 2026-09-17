@@ -28,8 +28,6 @@ QLabel {
 QLineEdit, QComboBox, QTableWidget, QProgressBar {
     font-size: 12px;
 }
-<<<<<<< Updated upstream
-=======
 
 QComboBox, QDateEdit, QTimeEdit {
     background-color: #ffffff;
@@ -63,7 +61,6 @@ QCalendarWidget QAbstractItemView:enabled {
     background-color: #ffffff;
     color: #17212b;
 }
->>>>>>> Stashed changes
 """
 
 NAV_BUTTON_STYLE = """
@@ -77,15 +74,9 @@ QPushButton {
     border-radius: 14px;
     text-align: center;
 }
-<<<<<<< Updated upstream
-QPushButton:hover {
-    background: #20243a;
-    color: #f4f7fb;
-=======
 QPushButton:hover:!checked {
     background: #edf8f1;
     color: #17212b;
->>>>>>> Stashed changes
 }
 QPushButton:pressed {
     background: #dff1e6;
@@ -95,14 +86,11 @@ QPushButton:checked {
     color: #247a50;
     border: 1px solid #b8dfc8;
 }
-<<<<<<< Updated upstream
-=======
 QPushButton:checked:hover {
     background: #d8efdf;
     color: #1e6843;
     border: 1px solid #9ed0b2;
 }
->>>>>>> Stashed changes
 """
 
 ACTION_BUTTON_STYLE = """

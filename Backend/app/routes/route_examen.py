@@ -11,11 +11,6 @@ router= APIRouter(prefix="/examen",tags=["Examen"])
 def create_examen_route(examen : Create_examen , db : db_dependancy):
     return create_examen(examen , db)
 
-<<<<<<< Updated upstream
-@router.get("/cours/{id_cours}", response_model=List[Voir_examens])
-def get_examen_route(id_cours:int,db:db_dependancy):
-    return get_examen(id_cours,db)
-=======
 @router.get("/all", response_model=List[Voir_examens])
 def get_examen_route(db:db_dependancy):
     return get_examen(db)
@@ -34,4 +29,3 @@ def update_examen_route(
 def delete_examen_route(examen_id: int, db: db_dependancy):
     examen_service.delete_examen(db, examen_id)
     return None
->>>>>>> Stashed changes

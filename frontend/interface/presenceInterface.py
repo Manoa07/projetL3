@@ -13,10 +13,7 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QPixmap
 from pathlib import Path
 import requests
-<<<<<<< Updated upstream
-=======
 from config import API_BASE_URL, API_TIMEOUT
->>>>>>> Stashed changes
 from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
 from components.cameraView import CameraView
@@ -38,11 +35,7 @@ class PresenceInterface(QWidget):
         # --- 1. BARRE LATÉRALE ---
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
-<<<<<<< Updated upstream
-        self.sidebar.setFixedWidth(108)
-=======
         self.sidebar.setFixedWidth(214)
->>>>>>> Stashed changes
         self.sidebar.setStyleSheet("""
             QFrame#Sidebar {
                 background-color: #ffffff;
@@ -139,15 +132,11 @@ class PresenceInterface(QWidget):
         layout.addWidget(self.stack, stretch=5)
     def load_cours(self):
         try:
-<<<<<<< Updated upstream
-            response = requests.get("http://127.0.0.1:8000/cours/all")
-=======
             response = requests.get(
                 f"{API_BASE_URL}/cours/all",
                 timeout=API_TIMEOUT,
             )
             response.raise_for_status()
->>>>>>> Stashed changes
             cours_list = response.json()
 
             self.cours_select.clear()
@@ -167,31 +156,9 @@ class PresenceInterface(QWidget):
         placeholder_layout = QVBoxLayout(self.cam_placeholder)
         placeholder_layout.setContentsMargins(24, 24, 24, 24)
         placeholder_layout.setSpacing(16)
-<<<<<<< Updated upstream
-        
-        title = QLabel("<b style='color:#4facfe; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
-        placeholder_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
-
-=======
-
         title = QLabel("<b style='color:#247a50; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
         placeholder_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
 
-        # BUG-14 : cours_select créé et ajouté au layout AVANT insertWidget
-        self.cours_select = QComboBox()
-        self.cours_select.setFixedWidth(300)
-        self.cours_select.setStyleSheet("""
-            QComboBox {
-                background: #ffffff;
-                border: 1px solid #d8e0e8;
-                border-radius: 10px;
-                padding: 10px 12px;
-                color: #17212b;
-            }
-            QComboBox::drop-down { border: none; }
-        """)
-
->>>>>>> Stashed changes
         self.start_btn = QPushButton("ACTIVER LE SCAN DE PRÉSENCE")
         self.start_btn.setIcon(load_icon("play"))
         self.start_btn.setFixedSize(300, 70)
@@ -310,11 +277,7 @@ class PresenceInterface(QWidget):
         btn = QPushButton(text)
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
-<<<<<<< Updated upstream
-        btn.setFixedSize(100, 86)
-=======
         btn.setMinimumHeight(47)
->>>>>>> Stashed changes
         btn.setIcon(icon)
         btn.setIconSize(QSize(19, 19))
         btn.setCursor(Qt.CursorShape.PointingHandCursor)

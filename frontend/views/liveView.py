@@ -8,11 +8,7 @@ class LiveView(QWidget):
         self.alert_callback = alert_callback 
         
         layout = QVBoxLayout(self)
-<<<<<<< Updated upstream
-        layout.addWidget(QLabel("<b style='color:#4facfe; font-size:18px;'>SURVEILLANCE EN DIRECT</b>"))
-=======
         layout.addWidget(QLabel("<b style='color:#247a50; font-size:18px;'>SURVEILLANCE EN DIRECT</b>"))
->>>>>>> Stashed changes
         
         grid = QGridLayout()
         self.cam1 = CameraView("SALLE EXAMEN A", "Identification & Posture")
@@ -42,11 +38,6 @@ class LiveView(QWidget):
     def stop_camera(self):
         """Arrêt sécurisé du thread"""
         if hasattr(self, 'thread') and self.thread is not None:
-<<<<<<< Updated upstream
-            if self.thread.isRunning():
-                self.thread.stop()
-            self.thread = None # Libère la référence
-=======
             try:
                 self.thread.change_pixmap_signal.disconnect()
             except Exception:
@@ -61,4 +52,3 @@ class LiveView(QWidget):
 
         if hasattr(self, 'cam1') and self.cam1 is not None:
             self.cam1.clear_view()
->>>>>>> Stashed changes

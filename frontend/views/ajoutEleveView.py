@@ -22,24 +22,15 @@ class AjoutEleveView(QWidget):
         
         # Widget qui contient le contenu scrollable
         container = QWidget()
-<<<<<<< Updated upstream
-        container.setStyleSheet("background-color: #0f111a;")
-=======
         container.setObjectName("AjoutEleveContainer")
         container.setStyleSheet("QWidget#AjoutEleveContainer { background-color: #f6f8fb; }")
->>>>>>> Stashed changes
         layout = QVBoxLayout(container)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(18)
 
-<<<<<<< Updated upstream
-        # Titre
-        title = QLabel("<b style='color:#f4f7fb; font-size:20px; letter-spacing: 1.4px;'>AJOUT ÉLÈVE</b>")
-=======
         title = QLabel("<b style='color:#17212b; font-size:20px; letter-spacing: 1.4px;'>AJOUT ÉLÈVE</b>")
         title.setStyleSheet("background: transparent;")
->>>>>>> Stashed changes
         layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # 2. FORMULAIRE (Le cadre interne)
@@ -65,30 +56,19 @@ class AjoutEleveView(QWidget):
        # --- SECTION PHOTO ---
         form_layout.addSpacing(10)
         photo_title = QLabel("Photo")
-<<<<<<< Updated upstream
-        photo_title.setStyleSheet("color: #f4f7fb; font-weight: 700;")
-=======
         photo_title.setStyleSheet("background: transparent; color: #17212b; font-weight: 700;")
->>>>>>> Stashed changes
         form_layout.addWidget(photo_title)
         
         photo_section = QHBoxLayout()
         self.photo_label = QLabel("Format\nPortrait")
         self.photo_label.setFixedSize(150, 200) 
         self.photo_label.setStyleSheet("""
-<<<<<<< Updated upstream
-            border: 1px dashed #335a7f; 
-            border-radius: 12px; 
-            background-color: #0f111a;
-            color: #586078;
-=======
             QLabel {
                 border: 1px dashed #9ed0b2;
                 border-radius: 12px;
                 background-color: #f6f8fb;
                 color: #718096;
             }
->>>>>>> Stashed changes
         """)
         self.photo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -98,28 +78,15 @@ class AjoutEleveView(QWidget):
         self.btn_photo.setIcon(load_icon("course"))
         self.btn_photo.setMinimumSize(220, 50) # Utilisation de MinimumSize au lieu de FixedSize
         self.btn_photo.setStyleSheet("""
-<<<<<<< Updated upstream
-            QPushButton { 
-                background-color: #20243a; 
-                color: #ffffff; 
-                border-radius: 12px; 
-=======
             QPushButton {
                 background-color: #edf1f5;
                 color: #ffffff;
                 border-radius: 12px;
->>>>>>> Stashed changes
                 font-weight: 700;
                 font-size: 13px;
                 padding: 10px 14px;
             }
-<<<<<<< Updated upstream
-            QPushButton:hover { 
-                background-color: #2a304b; 
-            }
-=======
             QPushButton:hover { background-color: #dff1e6; }
->>>>>>> Stashed changes
         """)
         self.btn_photo.clicked.connect(self.upload_photo)
         
@@ -131,15 +98,6 @@ class AjoutEleveView(QWidget):
         #Bouton capture image
         self.btn_capture = QPushButton("Capturer 10")
         self.btn_capture.setStyleSheet("""
-<<<<<<< Updated upstream
-             QPushButton {
-            background-color: #4facfe;
-            color: white;
-            padding: 12px;
-            border-radius: 12px;
-            font-weight: 700;
-            }
-=======
             QPushButton {
                 background-color: #2e9d68;
                 color: white;
@@ -149,7 +107,6 @@ class AjoutEleveView(QWidget):
             }
             QPushButton:hover { background-color: #247a50; }
             QPushButton:disabled { background-color: #b8c9be; color: #ffffff; }
->>>>>>> Stashed changes
         """)
         self.btn_capture.clicked.connect(self.start_capture)
         form_layout.addWidget(self.btn_capture)
@@ -214,34 +171,20 @@ class AjoutEleveView(QWidget):
 
     def create_input(self, layout, label_text):
         label = QLabel(label_text)
-<<<<<<< Updated upstream
-        label.setStyleSheet("color: #f4f7fb; font-weight: 600; margin-top: 4px;")
-=======
         label.setStyleSheet("background: transparent; color: #17212b; font-weight: 600; margin-top: 4px;")
->>>>>>> Stashed changes
         layout.addWidget(label)
         field = QLineEdit()
 
         field.setStyleSheet("""
             QLineEdit {
-<<<<<<< Updated upstream
-                background-color: #0f111a;
-=======
                 background-color: #ffffff;
->>>>>>> Stashed changes
                 border: 1px solid #23283d;
                 padding: 12px;
                 border-radius: 10px;
                 color: white;
                 margin-bottom: 4px;
             }
-<<<<<<< Updated upstream
-            QLineEdit:focus {
-                border: 1px solid #4facfe;
-            }
-=======
             QLineEdit:focus { border: 1px solid #2e9d68; }
->>>>>>> Stashed changes
         """)
 
         layout.addWidget(field)

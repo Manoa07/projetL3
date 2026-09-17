@@ -35,11 +35,7 @@ class SurveillanceInterface(QWidget):
         # --- A. BARRE LATÉRALE ---
         self.sidebar = QFrame()
         self.sidebar.setObjectName("Sidebar")
-<<<<<<< Updated upstream
-        self.sidebar.setFixedWidth(108)
-=======
         self.sidebar.setFixedWidth(214)
->>>>>>> Stashed changes
         self.sidebar.setStyleSheet("""
             QFrame#Sidebar {
                 background-color: #ffffff;
@@ -184,11 +180,7 @@ class SurveillanceInterface(QWidget):
         btn = QPushButton(text)
         btn.setCheckable(True)
         btn.setAutoExclusive(True)
-<<<<<<< Updated upstream
-        btn.setFixedSize(100, 86)
-=======
         btn.setMinimumHeight(47)
->>>>>>> Stashed changes
         btn.setIcon(icon)
         btn.setIconSize(QSize(19, 19))
         btn.setCursor(Qt.CursorShape.PointingHandCursor)

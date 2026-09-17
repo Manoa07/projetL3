@@ -1,9 +1,3 @@
-<<<<<<< Updated upstream
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QTableWidget,QPushButton,QTableWidgetItem, QHeaderView
-
-from PyQt6.QtCore import QTimer, Qt
-import httpx
-=======
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QPushButton,
     QTableWidgetItem, QHeaderView, QAbstractItemView, QMessageBox,
@@ -13,7 +7,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QTimer, Qt
 import httpx
 from config import API_BASE_URL, API_TIMEOUT
->>>>>>> Stashed changes
 import asyncio
 from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
@@ -48,17 +41,12 @@ class ElevesView(QWidget):
         layout.addWidget(self.title_label)
         
         # Configuration du tableau
-<<<<<<< Updated upstream
-        self.table = QTableWidget(0, 3) # Commence avec 0 ligne
-        self.table.setHorizontalHeaderLabels(["N°", "Nom et Prénoms", "Classe"])
-=======
         self.table = QTableWidget(0, 4) # Commence avec 0 ligne
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setHorizontalHeaderLabels(
             ["N°", "Nom et Prénoms", "Classe", "Actions"]
         )
->>>>>>> Stashed changes
         self.table.setStyleSheet("""
             QTableWidget {
                 background-color: #ffffff;

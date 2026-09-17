@@ -86,7 +86,7 @@ POSTURES = [
     },
     {
         "folder": "regarde_antiseche",
-        "title": "5/5 : Regarde Antiseche / Jambes",
+        "title": "5/5 : Regarde l'antisèche / les jambes",
         "instruction": "Baissez la tete vers vos jambes / vers le bas.",
         "samples": 60
     }

@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtWidgets import QGridLayout, QLabel, QVBoxLayout, QWidget
 
 from components.cameraView import CameraView
@@ -10,11 +12,16 @@ class LiveView(QWidget):
         self.alert_callback = alert_callback
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
         layout.addWidget(
-            QLabel("<b style='color:#247a50; font-size:18px;'>SURVEILLANCE EN DIRECT</b>")
+            QLabel("<b style='color:#243447; font-size:18px;'>SURVEILLANCE EN DIRECT</b>")
         )
 
         grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(8)
         self.cam1 = CameraView("SALLE EXAMEN A", "Identification & Posture")
         cameras = [
             self.cam1,
@@ -29,19 +36,44 @@ class LiveView(QWidget):
         self.cams = cameras
         layout.addLayout(grid)
 
-        self.thread = VideoThread(0)
-        self.thread.change_pixmap_signal.connect(self.cam1.update_frame)
-        self.thread.alert_signal.connect(self.alert_callback)
-        self.thread.start()
+        self.threads = []
+        camera_names = [
+            "SALLE EXAMEN A",
+            "SALLE EXAMEN B",
+            "COULOIR 1",
+            "ENTRÉE",
+        ]
+        sources = self._camera_sources()
+        for camera_index, source in enumerate(sources[:len(cameras)]):
+            thread = VideoThread(source, camera_names[camera_index])
+            thread.change_pixmap_signal.connect(cameras[camera_index].update_frame)
+            thread.alert_signal.connect(self.alert_callback)
+            thread.start()
+            self.threads.append(thread)
+
+    @staticmethod
+    def _camera_sources():
+        configured = os.getenv("CAMERA_SOURCES", "1,0")
+        sources = []
+        for value in configured.split(","):
+            value = value.strip()
+            if not value:
+                continue
+            try:
+                sources.append(int(value))
+            except ValueError:
+                sources.append(value)
+        return sources or [0]
 
     def stop_camera(self):
-        if self.thread is not None:
+        for thread in self.threads:
             try:
-                self.thread.change_pixmap_signal.disconnect()
-                self.thread.alert_signal.disconnect()
+                thread.change_pixmap_signal.disconnect()
+                thread.alert_signal.disconnect()
             except TypeError:
                 pass
-            if self.thread.isRunning():
-                self.thread.stop()
-            self.thread = None
-        self.cam1.clear_view()
+            if thread.isRunning():
+                thread.stop()
+        self.threads.clear()
+        for camera in self.cams:
+            camera.clear_view()

@@ -12,10 +12,12 @@ from PyQt6.QtWidgets import (
     QTimeEdit,
     QVBoxLayout,
     QWidget,
+    QScrollArea,
 )
 import requests
 
 from components.icon_loader import load_icon
+from components.theme import configure_table
 from config import API_BASE_URL, API_TIMEOUT
 from services.events import global_signals
 
@@ -29,13 +31,13 @@ QTimeEdit {
     color: #17212b;
     min-width: 400px;
 }
-QTimeEdit:focus { border: 1px solid #2e9d68; }
+QTimeEdit:focus { border: 1px solid #243447; }
 QTimeEdit::up-button, QTimeEdit::down-button {
     width: 22px;
     background: #f6f8fb;
     border-left: 1px solid #d8e0e8;
 }
-QTimeEdit::up-button:hover, QTimeEdit::down-button:hover { background: #dff1e6; }
+QTimeEdit::up-button:hover, QTimeEdit::down-button:hover { background: #dfe5eb; }
 """
 
 
@@ -55,7 +57,14 @@ class AjoutCoursView(QWidget):
 
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout(self)
+        page_layout = QVBoxLayout(self)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        page = QWidget()
+        layout = QVBoxLayout(page)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
 
@@ -77,7 +86,7 @@ class AjoutCoursView(QWidget):
             border-radius: 10px; background: #ffffff; color: #17212b; }
         QComboBox::drop-down { border: none; background: #ffffff; }
         QComboBox QAbstractItemView { background: #ffffff; color: #17212b;
-            selection-background-color: #dff1e6; border: 1px solid #d8e0e8; }
+            selection-background-color: #dfe5eb; border: 1px solid #d8e0e8; }
         """
         for field, placeholder in (
             (self.input_prof, "Choisir un professeur"),
@@ -104,14 +113,20 @@ class AjoutCoursView(QWidget):
         self.btn_save.setIcon(load_icon("course"))
         self.btn_save.setFixedSize(300, 40)
         self.btn_save.setStyleSheet(
-            "QPushButton { background:#2e9d68; color:white; font-weight:700; "
+            "QPushButton { background:#243447; color:white; font-weight:700; "
             "border-radius:12px; padding:6px 12px; }"
-            "QPushButton:hover { background:#247a50; }"
+            "QPushButton:hover { background:#1b2838; }"
         )
         self.btn_save.clicked.connect(self.submit_cours)
         layout.addWidget(self.btn_save, alignment=Qt.AlignmentFlag.AlignCenter)
 
         refresh = QPushButton("Actualiser les référentiels")
+        refresh.setIcon(load_icon("refresh"))
+        refresh.setStyleSheet(
+            "QPushButton { background:#e8f0ff; color:#2459bd; font-weight:700; "
+            "border:1px solid #bdd0f7; border-radius:10px; padding:8px 14px; }"
+            "QPushButton:hover { background:#dbe7ff; }"
+        )
         refresh.clicked.connect(self.load_references)
         layout.addWidget(refresh, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -121,10 +136,14 @@ class AjoutCoursView(QWidget):
 
         self.cours_table = QTableWidget(0, 8)
         self.cours_table.setHorizontalHeaderLabels(
-            ["ID", "Nom", "Date", "Heure début", "Heure fin", "Salle", "Matière", "Actions"]
+            ["ID", "Nom", "Date", "Heure de début", "Heure de fin", "Salle", "Matière", "Actions"]
         )
+        configure_table(self.cours_table)
         layout.addWidget(self.cours_table)
         layout.addStretch()
+        page.setMinimumWidth(700)
+        scroll.setWidget(page)
+        page_layout.addWidget(scroll)
 
         self.editing_cours_id = None
         self.load_references()
@@ -139,7 +158,7 @@ class AjoutCoursView(QWidget):
         field.setStyleSheet(
             "QLineEdit { padding:12px; border:1px solid #d8e0e8; "
             "border-radius:10px; background:#ffffff; color:#17212b; }"
-            "QLineEdit:focus { border:1px solid #2e9d68; }"
+            "QLineEdit:focus { border:1px solid #243447; }"
         )
         return field
 
@@ -401,20 +420,41 @@ class AjoutCoursView(QWidget):
 
     def submit_cours(self):
         # QTime() invalide = l'utilisateur n'a pas saisi d'heure
-        if not self.input_debut.time().isValid() or not self.input_fin.time().isValid():
+        start_time = self.input_debut.time()
+        end_time = self.input_fin.time()
+        if not start_time.isValid() or not end_time.isValid():
             QMessageBox.warning(self, "Erreur",
                                 "Veuillez saisir les heures de début et de fin.")
             return
 
-        data = {
-            "Nom_cours": self.input_nom.text(),
-            "Prof_cours": self.input_prof.currentData(),
-            "Salle_cours": self.input_salle.currentData(),
-            "Matiere_cours": self.input_matiere.currentData(),
-        }
-        if not data["Nom_cours"] or data["Prof_cours"] is None:
-            QMessageBox.warning(self, "Erreur", "Veuillez remplir les champs obligatoires.")
+        name = self.input_nom.text().strip()
+        professor_id = self.input_prof.currentData()
+        room_id = self.input_salle.currentData()
+        subject_id = self.input_matiere.currentData()
+        if not name or professor_id is None or room_id is None or subject_id is None:
+            QMessageBox.warning(
+                self,
+                "Erreur",
+                "Veuillez remplir le nom et sélectionner un professeur, une salle et une matière.",
+            )
             return
+        if end_time <= start_time:
+            QMessageBox.warning(
+                self,
+                "Horaires invalides",
+                "L'heure de fin doit être après l'heure de début.",
+            )
+            return
+
+        data = {
+            "nom_cours": name,
+            "date_cours": self.input_date.date().toString("yyyy-MM-dd"),
+            "heure_debut_cours": start_time.toString("HH:mm:ss"),
+            "heure_fin_cours": end_time.toString("HH:mm:ss"),
+            "id_professeur_professeur": professor_id,
+            "id_salle_salle": room_id,
+            "id_matiere_matiere": subject_id,
+        }
 
         try:
             method = requests.put if self.editing_cours_id else requests.post

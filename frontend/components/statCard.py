@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel
 
 class StatCard(QFrame):
-    def __init__(self, title, value, color="#2e9d68"):
+    def __init__(self, title, value, color="#243447"):
         super().__init__()
         self.setObjectName("Card")
         self.setStyleSheet(f"""

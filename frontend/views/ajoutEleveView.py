@@ -105,7 +105,7 @@ class AjoutEleveView(QWidget):
         self.photo_label.setFixedSize(150, 200)
         self.photo_label.setStyleSheet("""
             QLabel {
-                border: 1px dashed #9ed0b2;
+                border: 1px dashed #b8c4cf;
                 border-radius: 12px;
                 background-color: #f6f8fb;
                 color: #718096;
@@ -119,13 +119,13 @@ class AjoutEleveView(QWidget):
         self.btn_photo.setStyleSheet("""
             QPushButton {
                 background-color: #edf1f5;
-                color: #ffffff;
+                color: #17212b;
                 border-radius: 12px;
                 font-weight: 700;
                 font-size: 13px;
                 padding: 10px 14px;
             }
-            QPushButton:hover { background-color: #dff1e6; }
+            QPushButton:hover { background-color: #dfe5eb; }
         """)
         self.btn_photo.clicked.connect(self.upload_photo)
 
@@ -136,16 +136,16 @@ class AjoutEleveView(QWidget):
         form_layout.addLayout(photo_section)
 
         # Bouton capture (BUG-06 : lance CaptureThread, ne bloque plus l'UI)
-        self.btn_capture = QPushButton("Capturer 10 photos (auto)")
+        self.btn_capture = QPushButton("Capturer 10 photos (automatique)")
         self.btn_capture.setStyleSheet("""
             QPushButton {
-                background-color: #2e9d68;
+                background-color: #243447;
                 color: white;
                 padding: 12px;
                 border-radius: 12px;
                 font-weight: 700;
             }
-            QPushButton:hover { background-color: #247a50; }
+            QPushButton:hover { background-color: #1b2838; }
             QPushButton:disabled { background-color: #b8c9be; color: #ffffff; }
         """)
         # Correction : on ne bloque plus le thread Qt.
@@ -160,9 +160,9 @@ class AjoutEleveView(QWidget):
         self.btn_submit = QPushButton("ENREGISTRER L'ÉLÈVE")
         self.btn_submit.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_submit.setStyleSheet("""
-            QPushButton { background-color: #2ecc71; color: white; font-weight: 700;
+            QPushButton { background-color: #243447; color: white; font-weight: 700;
                           padding: 18px; margin-top: 24px; border-radius: 12px; font-size: 14px; }
-            QPushButton:hover { background-color: #27ae60; }
+            QPushButton:hover { background-color: #1b2838; }
         """)
         self.btn_submit.clicked.connect(lambda: asyncio.create_task(self.envoyer_donnees()))
         form_layout.addWidget(self.btn_submit)
@@ -189,7 +189,7 @@ class AjoutEleveView(QWidget):
         self.captured_images = frames
         self.btn_capture.setEnabled(True)
         self.capture_status.setText(f"✓ {len(frames)} photos capturées")
-        self.capture_status.setStyleSheet("background: transparent; color: #2ecc71; font-style: italic;")
+        self.capture_status.setStyleSheet("background: transparent; color: #243447; font-style: italic;")
 
     def _on_capture_error(self, msg):
         self.btn_capture.setEnabled(True)
@@ -200,15 +200,34 @@ class AjoutEleveView(QWidget):
     # Envoi API
     # ------------------------------------------------------------------
     async def envoyer_donnees(self):
-        if not self.nom.text() or not self.numero.text():
-            QMessageBox.warning(self, "Champs manquants", "Nom et numéro sont obligatoires.")
+        nom = self.nom.text().strip()
+        prenom = self.prenom.text().strip()
+        classe = self.classe.text().strip()
+        numero_text = self.numero.text().strip()
+        if not nom or not prenom or not classe or not numero_text:
+            QMessageBox.warning(
+                self,
+                "Champs manquants",
+                "Nom, prénom, classe et numéro sont obligatoires.",
+            )
+            return
+
+        try:
+            numero = int(numero_text)
+        except ValueError:
+            QMessageBox.warning(
+                self,
+                "Numéro invalide",
+                "Le numéro d'inscription doit être un nombre entier.",
+            )
+            self.numero.setFocus()
             return
 
         data = {
-            "Nom_eleve":    self.nom.text(),
-            "Prenom_eleve": self.prenom.text(),
-            "Classe_eleve": self.classe.text(),
-            "Numero_eleve": self.numero.text(),
+            "Nom_eleve": nom,
+            "Prenom_eleve": prenom,
+            "Classe_eleve": classe,
+            "Numero_eleve": str(numero),
         }
 
         files = []
@@ -220,9 +239,16 @@ class AjoutEleveView(QWidget):
                 photo_bytes = f.read()
             files.append(("photo", (filename, photo_bytes, "image/jpeg")))
 
+        captured_buffers = []
         for i, img in enumerate(self.captured_images):
             _, buffer = cv2.imencode(".jpg", img)
-            files.append(("images", (f"face_{i}.jpg", buffer.tobytes(), "image/jpeg")))
+            captured_buffers.append((f"face_{i}.jpg", buffer.tobytes(), "image/jpeg"))
+
+        # L'API exige toujours le champ photo. Une capture automatique peut
+        # donc servir de photo principale lorsqu'aucun fichier n'a été chargé.
+        if not self.photo_path and captured_buffers:
+            files.append(("photo", captured_buffers[0]))
+        files.extend(("images", image) for image in captured_buffers)
 
         if not files:
             QMessageBox.warning(self, "Photos manquantes",
@@ -241,7 +267,11 @@ class AjoutEleveView(QWidget):
                 self.clear_fields()
                 QMessageBox.information(self, "Succès", "Élève enregistré avec succès.")
             else:
-                QMessageBox.warning(self, "Erreur backend", response.text)
+                try:
+                    detail = response.json().get("detail", response.text)
+                except ValueError:
+                    detail = response.text
+                QMessageBox.warning(self, "Erreur du serveur", str(detail))
         except Exception as e:
             QMessageBox.critical(self, "Erreur", str(e))
 
@@ -256,13 +286,14 @@ class AjoutEleveView(QWidget):
         field.setStyleSheet("""
             QLineEdit {
                 background-color: #ffffff;
-                border: 1px solid #23283d;
+                border: 1px solid #d8e0e8;
                 padding: 12px;
                 border-radius: 10px;
-                color: white;
+                color: #17212b;
                 margin-bottom: 4px;
             }
-            QLineEdit:focus { border: 1px solid #2e9d68; }
+            QLineEdit::placeholder { color: #8a98a8; }
+            QLineEdit:focus { border: 1px solid #243447; }
         """)
         layout.addWidget(field)
         return field

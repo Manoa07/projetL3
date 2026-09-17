@@ -10,6 +10,7 @@ from config import API_BASE_URL, API_TIMEOUT
 import asyncio
 from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
+from components.theme import configure_dialog, configure_table
 from services.events import global_signals # Importation du bus d'événements
 class ElevesView(QWidget):
     def __init__(self):
@@ -18,35 +19,52 @@ class ElevesView(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(14)
+        header = QHBoxLayout()
+        heading = QVBoxLayout()
+        heading.setSpacing(3)
+        self.title_label = QLabel("ÉLÈVES")
+        self.title_label.setStyleSheet(
+            "color:#17212b; font-size:22px; font-weight:800; letter-spacing:0.5px;"
+        )
+        heading.addWidget(self.title_label)
+        subtitle = QLabel("Gérez les inscriptions et consultez l'historique de présence.")
+        subtitle.setStyleSheet("color:#718096; font-size:11px;")
+        heading.addWidget(subtitle)
+        header.addLayout(heading)
+        header.addStretch()
+        self.count_label = QLabel("0 élève")
+        self.count_label.setStyleSheet(
+            "color:#2459bd; background:#e8f0ff; border:1px solid #bdd0f7; "
+            "border-radius:12px; padding:7px 12px; font-weight:700;"
+        )
+        header.addWidget(self.count_label)
         self.refresh_button = QPushButton("Rafraîchir")
-        self.refresh_button.setIcon(load_icon("chart"))
+        self.refresh_button.setIcon(load_icon("refresh"))
         self.refresh_button.setStyleSheet("""
             QPushButton {
-                background-color: #2e9d68;
-                color: white;
-                padding: 10px 14px;
-                border-radius: 12px;
+                background-color: #e8f0ff;
+                color: #2459bd;
+                border: 1px solid #bdd0f7;
+                padding: 8px 14px;
+                border-radius: 10px;
                 font-weight: 700;
                 }
             QPushButton:hover {
-                background-color: #247a50;
+                background-color: #dbe7ff;
             }
     """)
         self.refresh_button.clicked.connect(self.refresh_data)
-
-        layout.addWidget(self.refresh_button)        
-
-        # Titre de la section
-        self.title_label = QLabel("<b style='color:#17212b; font-size:18px; letter-spacing: 1.4px;'>ÉLÈVES</b>")
-        layout.addWidget(self.title_label)
+        header.addWidget(self.refresh_button)
+        layout.addLayout(header)
         
         # Configuration du tableau
         self.table = QTableWidget(0, 4) # Commence avec 0 ligne
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setHorizontalHeaderLabels(
-            ["N°", "Nom et Prénoms", "Classe", "Actions"]
+            ["N°", "Nom et prénom", "Classe", "Actions"]
         )
+        configure_table(self.table)
         self.table.setStyleSheet("""
             QTableWidget {
                 background-color: #ffffff;
@@ -56,10 +74,10 @@ class ElevesView(QWidget):
                 border-radius: 14px;
             }
             QHeaderView::section {
-                background-color: #fff5f2;
-                color: #247a50;
+                background-color: #e8f0ff;
+                color: #2459bd;
                 padding: 10px;
-                border: 1px solid #e4e9ef;
+                border: 1px solid #d6e2f7;
                 font-weight: 700;
             }
             QTableWidget::item {
@@ -68,7 +86,17 @@ class ElevesView(QWidget):
         """)
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.verticalHeader().setDefaultSectionSize(42)
+        self.table.setShowGrid(False)
         layout.addWidget(self.table)
+        self.empty_label = QLabel("Aucun élève enregistré pour le moment.")
+        self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.empty_label.setStyleSheet(
+            "color:#718096; background:#f6f8fb; border:1px dashed #d8e0e8; "
+            "border-radius:10px; padding:12px; font-style:italic;"
+        )
+        self.empty_label.setVisible(True)
+        layout.addWidget(self.empty_label)
 
         # --- CONNEXION AU SIGNAL GLOBAL ---
         # Dès que global_signals.data_changed est émis, on rafraîchit la liste
@@ -98,7 +126,7 @@ class ElevesView(QWidget):
             )
             async with httpx.AsyncClient(timeout=timeout) as client:
                 # Appel à votre backend local
-                response = await client.get(f"{API_BASE_URL}/eleve/all")
+                response = await client.get("http://127.0.0.1:8000/eleve/all")
                 
                 if response.status_code == 200:
                     eleves = response.json()
@@ -125,6 +153,9 @@ class ElevesView(QWidget):
     def populate_table(self, eleves):
         """Remplit le tableau avec les données reçues"""
         self.table.setRowCount(len(eleves))
+        count = len(eleves)
+        self.count_label.setText(f"{count} élève" if count == 1 else f"{count} élèves")
+        self.empty_label.setVisible(not eleves)
 
         for i, e in enumerate(eleves):
             # Colonne Numéro
@@ -152,13 +183,31 @@ class ElevesView(QWidget):
             actions = QWidget()
             actions_layout = QHBoxLayout(actions)
             actions_layout.setContentsMargins(2, 2, 2, 2)
-            actions_layout.setSpacing(4)
+            actions_layout.setSpacing(6)
+            for button in (history_button, update_button, delete_button):
+                button.setMinimumHeight(30)
+                button.setCursor(Qt.CursorShape.PointingHandCursor)
+            history_button.setStyleSheet(
+                "QPushButton { background:#eef4ff; color:#2459bd; border:1px solid #bdd0f7; "
+                "border-radius:7px; padding:4px 8px; font-weight:700; }"
+                "QPushButton:hover { background:#dbe7ff; }"
+            )
+            update_button.setStyleSheet(
+                "QPushButton { background:#f6f8fb; color:#4b5563; border:1px solid #d8e0e8; "
+                "border-radius:7px; padding:4px 8px; font-weight:700; }"
+                "QPushButton:hover { background:#e9eef5; }"
+            )
+            delete_button.setStyleSheet(
+                "QPushButton { background:#fff1ef; color:#b42318; border:1px solid #f3c7c2; "
+                "border-radius:7px; padding:4px 8px; font-weight:700; }"
+                "QPushButton:hover { background:#ffe1dd; }"
+            )
             actions_layout.addWidget(history_button)
             actions_layout.addWidget(update_button)
             actions_layout.addWidget(delete_button)
             self.table.setCellWidget(i, 3, actions)
 
-        self.table.setColumnWidth(3, 310)
+        self.table.setColumnWidth(3, 360)
 
     def show_history(self, eleve):
         """Affiche l'historique de présence de l'élève sélectionné."""
@@ -367,8 +416,10 @@ class ElevesView(QWidget):
             f"{eleve.get('Prenom_eleve', '')}"
         )
         dialog.resize(620, 420)
+        configure_dialog(dialog)
         layout = QVBoxLayout(dialog)
         table = QTableWidget(len(history), 3, dialog)
+        configure_table(table)
         table.setHorizontalHeaderLabels(["Date", "Heure", "Statut"])
         table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         table.horizontalHeader().setSectionResizeMode(

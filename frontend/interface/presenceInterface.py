@@ -50,7 +50,6 @@ class PresenceInterface(QWidget):
                 color: #17212b;
                 font-size: 17px;
                 font-weight: 800;
-                letter-spacing: 0.4px;
             }
             QLabel#SidebarSubtitle, QLabel#SidebarSection {
                 color: #8a98a8;
@@ -65,7 +64,7 @@ class PresenceInterface(QWidget):
         """)
         sidebar_layout = QVBoxLayout(self.sidebar)
         sidebar_layout.setContentsMargins(16, 20, 16, 16)
-        sidebar_layout.setSpacing(7)
+        sidebar_layout.setSpacing(8)
 
         brand = QLabel()
         brand.setObjectName("SidebarBrand")
@@ -75,7 +74,7 @@ class PresenceInterface(QWidget):
         brand.setFixedHeight(74)
         brand.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         sidebar_layout.addWidget(brand)
-        subtitle = QLabel("GESTION DE PRÉSENCE")
+        subtitle = QLabel("GESTION DES PRÉSENCES")
         subtitle.setObjectName("SidebarSubtitle")
         sidebar_layout.addWidget(subtitle)
         sidebar_layout.addSpacing(18)
@@ -85,12 +84,12 @@ class PresenceInterface(QWidget):
         sidebar_layout.addWidget(navigation_label)
         sidebar_layout.addSpacing(4)
 
-        self.btn_cam = self.create_nav_btn("LIVE", 0, load_icon("live"))
-        self.btn_list = self.create_nav_btn("ÉLÈVES", 1, load_icon("users"))
-        self.btn_add = self.create_nav_btn("AJOUT", 2, load_icon("add"))
-        self.btn_add_cours = self.create_nav_btn("COURS", 3, load_icon("course"))
-        self.btn_add_examen = self.create_nav_btn("EXAMEN", 4, load_icon("course"))
-        self.btn_data = self.create_nav_btn("DONNÉES", 5, load_icon("add"))
+        self.btn_cam = self.create_nav_btn("Direct", 0, load_icon("live"))
+        self.btn_list = self.create_nav_btn("Élèves", 1, load_icon("users"))
+        self.btn_add = self.create_nav_btn("Ajouter", 2, load_icon("add"))
+        self.btn_add_cours = self.create_nav_btn("Cours", 3, load_icon("course"))
+        self.btn_add_examen = self.create_nav_btn("Examen", 4, load_icon("course"))
+        self.btn_data = self.create_nav_btn("Données", 5, load_icon("add"))
         self.btn_cam.setChecked(True)
 
         sidebar_layout.addWidget(self.btn_cam)
@@ -114,12 +113,17 @@ class PresenceInterface(QWidget):
             QPushButton {
                 background: transparent;
                 color: #718096;
+                border: 1px solid transparent;
                 padding: 11px 12px;
                 border-radius: 10px;
                 font-weight: 700;
                 text-align: left;
             }
-            QPushButton:hover { background: #edf8f1; color: #247a50; }
+            QPushButton:hover {
+                background: #eef4ff;
+                color: #2459bd;
+                border: 1px solid #d6e2f7;
+            }
         """)
         btn_back.clicked.connect(self.handle_back_home)
         sidebar_layout.addWidget(btn_back)
@@ -160,20 +164,26 @@ class PresenceInterface(QWidget):
                     f"Salle #{cours.get('id_salle_salle') or cours.get('Salle_cours', '')}",
                     cours["Id_cours"]
                 )
+            has_courses = bool(cours_list)
+            self.cours_select.setVisible(has_courses)
+            self.start_btn.setEnabled(has_courses)
         except Exception as e:
             print("Erreur chargement cours :", e)
+            self.cours_select.setVisible(False)
+            self.start_btn.setEnabled(False)
     def setup_placeholder_page(self):
         """Crée l'interface d'attente avec le bouton de démarrage"""
         self.cam_placeholder = QWidget()
         placeholder_layout = QVBoxLayout(self.cam_placeholder)
         placeholder_layout.setContentsMargins(24, 24, 24, 24)
         placeholder_layout.setSpacing(16)
-        title = QLabel("<b style='color:#247a50; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
+        title = QLabel("<b style='color:#2f6fed; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
         placeholder_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
 
         # BUG-14 : cours_select créé et ajouté au layout AVANT insertWidget
         self.cours_select = QComboBox()
         self.cours_select.setFixedWidth(300)
+        self.cours_select.setVisible(False)
         self.cours_select.setStyleSheet("""
             QComboBox {
                 background: #1a1f2f;
@@ -190,14 +200,14 @@ class PresenceInterface(QWidget):
         self.start_btn.setFixedSize(300, 70)
         self.start_btn.setStyleSheet("""
             QPushButton {
-                background: #2e9d68;
+                background: #2f6fed;
                 color: white;
                 font-weight: 700;
                 border-radius: 12px;
                 font-size: 13px;
                 padding: 12px 16px;
             }
-            QPushButton:hover { background: #247a50; }
+            QPushButton:hover { background: #2459bd; }
         """)
         self.start_btn.clicked.connect(self.start_presence_camera)
 
@@ -304,21 +314,20 @@ class PresenceInterface(QWidget):
                 padding: 10px 12px;
                 border-radius: 10px;
                 text-align: left;
-                spacing: 10px;
             }
             QPushButton:hover:!checked {
-                background: #f4faf6;
+                background: #f4f7ff;
                 color: #17212b;
             }
-            QPushButton:pressed { background: #dff1e6; }
+            QPushButton:pressed { background: #dbe7ff; }
             QPushButton:checked {
-                background: #e6f5ec;
-                color: #247a50;
-                border: 1px solid #b8dfc8;
+                background: #e8f0ff;
+                color: #2459bd;
+                border: 1px solid #bdd0f7;
             }
             QPushButton:checked:hover {
-                background: #d8efdf;
-                color: #1e6843;
+                background: #dbe7ff;
+                color: #204fa8;
             }
         """)
         btn.clicked.connect(lambda: self.stack.setCurrentIndex(index))

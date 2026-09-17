@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 import requests
 from config import API_BASE_URL, API_TIMEOUT
 from services.events import global_signals
+from components.theme import configure_table
 
 
 class GestionReferentielsView(QWidget):
@@ -25,7 +26,7 @@ class GestionReferentielsView(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(14)
-        layout.addWidget(QLabel("<h2 style='color:#f4f7fb;'>GESTION DES DONNÉES</h2>"), alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(QLabel("<h2 style='color:#17212b;'>GESTION DES DONNÉES</h2>"), alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.status = QLabel("Les identifiants sont attribués automatiquement.")
         self.status.setStyleSheet("color:#8b93a7; font-style:italic;")
@@ -59,7 +60,7 @@ class GestionReferentielsView(QWidget):
         button.setFixedSize(300, 40)
         button.setStyleSheet(
             """ 
-              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
+              QPushButton { background: #243447; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
               QPushButton:hover{ background-color: #052613;}
             """
         )
@@ -69,6 +70,7 @@ class GestionReferentielsView(QWidget):
         self.professeur_table.setHorizontalHeaderLabels(
             ["ID", "Nom", "Prénom", "Matricule", "Actions"]
         )
+        configure_table(self.professeur_table)
         layout.addWidget(self.professeur_table)
         self.load_professeurs()
         layout.addStretch()
@@ -83,7 +85,7 @@ class GestionReferentielsView(QWidget):
         button.setFixedSize(300, 40)
         button.setStyleSheet(
             """ 
-              QPushButton { background: #2ecc71; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
+              QPushButton { background: #243447; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
               QPushButton:hover{ background-color: #052613;}
             """
         )
@@ -91,6 +93,7 @@ class GestionReferentielsView(QWidget):
         layout.addWidget(button, alignment = Qt.AlignmentFlag.AlignCenter )        
         table = QTableWidget(0, 3)
         table.setHorizontalHeaderLabels(["ID", "Nom", "Actions"])
+        configure_table(table)
         layout.addWidget(table)
         setattr(self, f"{kind}_table", table)
         getattr(self, f"load_{kind}")()
@@ -137,8 +140,11 @@ class GestionReferentielsView(QWidget):
                 actions = QWidget()
                 actions_layout = QHBoxLayout(actions)
                 actions_layout.setContentsMargins(2, 2, 2, 2)
+                actions_layout.setSpacing(6)
                 update_button = QPushButton("Modifier")
                 delete_button = QPushButton("Supprimer")
+                update_button.setMinimumWidth(90)
+                delete_button.setMinimumWidth(90)
                 update_button.clicked.connect(
                     lambda checked=False, item=value, item_kind=kind:
                     self.update_referentiel(item_kind, item)
@@ -262,7 +268,7 @@ class GestionReferentielsView(QWidget):
             )
             if response.status_code in (200, 201):
                 self.status.setText(success)
-                self.status.setStyleSheet("color:#2ecc71;")
+                self.status.setStyleSheet("color:#243447;")
                 global_signals.data_changed.emit()
                 return True
             QMessageBox.warning(self, "Enregistrement impossible", response.text)
@@ -295,5 +301,10 @@ class GestionReferentielsView(QWidget):
         if not value:
             QMessageBox.warning(self, "Champ obligatoire", f"Saisissez le nom de la {title.lower()}.")
             return
-        if self.post(f"{kind}/create", {"nom": value}, f"{title} enregistré(e)."):
+        payload_field = "nom_salle" if kind == "salle" else "nom_matiere"
+        if self.post(
+            f"{kind}/create",
+            {payload_field: value},
+            f"{title} enregistré(e).",
+        ):
             field.clear()

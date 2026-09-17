@@ -44,7 +44,15 @@ def create_matiere(db: Session, data: MatiereCreate):
 
 def update_matiere(db: Session, matiere_id: int, data: MatiereCreate):
     value = get_matiere(db, matiere_id)
-    value.nom_matiere = data.nom_matiere.strip()
+    name = data.nom_matiere.strip()
+    duplicate = db.query(Matiere).filter(
+        Matiere.nom_matiere == name,
+        Matiere.id_matiere != matiere_id,
+    ).first()
+    if duplicate:
+        raise HTTPException(status_code=409, detail="Matière déjà existante")
+
+    value.nom_matiere = name
     try:
         db.commit()
         db.refresh(value)
@@ -64,6 +72,13 @@ def delete_matiere(db: Session, matiere_id: int):
     try:
         db.delete(value)
         db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        logger.error("Matière référencée lors de la suppression", exc_info=error)
+        raise HTTPException(
+            status_code=409,
+            detail="La matière est utilisée par un cours ou un examen.",
+        ) from error
     except Exception as error:
         db.rollback()
         logger.error("Erreur lors de la suppression de la matière", exc_info=error)

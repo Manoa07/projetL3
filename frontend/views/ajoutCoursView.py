@@ -1,10 +1,11 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel, QMessageBox,
-    QDateEdit, QTimeEdit, QComboBox,
+    QDateEdit, QTimeEdit, QComboBox, QHBoxLayout, QTableWidget,
+    QTableWidgetItem,
 )
 from PyQt6.QtCore import Qt, QDate, QTime
 import requests
-from config import API_BASE_URL
+from config import API_BASE_URL, API_TIMEOUT
 from components.icon_loader import load_icon
 from services.events import global_signals
 
@@ -140,6 +141,7 @@ class AjoutCoursView(QWidget):
             """
         )
         btn_save.clicked.connect(self.submit_cours)
+        self.btn_save = btn_save
         layout.addWidget(btn_save, alignment=Qt.AlignmentFlag.AlignCenter)
 
         refresh = QPushButton("↻ Actualiser les référentiels")
@@ -149,10 +151,19 @@ class AjoutCoursView(QWidget):
         self.status = QLabel("Chargement des référentiels…")
         self.status.setStyleSheet("color: #8b93a7; font-style: italic;")
         layout.addWidget(self.status, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.cours_table = QTableWidget(0, 8)
+        self.cours_table.setHorizontalHeaderLabels(
+            ["ID", "Nom", "Date", "Heure début", "Heure fin",
+             "Salle", "Matière", "Actions"]
+        )
+        layout.addWidget(self.cours_table)
         layout.addStretch()
 
+        self.editing_cours_id = None
         self.load_references()
+        self.load_cours()
         global_signals.data_changed.connect(self.load_references)
+        global_signals.data_changed.connect(self.load_cours)
 
     # ------------------------------------------------------------------
     def create_input(self, placeholder):
@@ -175,7 +186,10 @@ class AjoutCoursView(QWidget):
         )
         try:
             for field, endpoint, label_fn, identifier in endpoints:
-                response = requests.get(f"{API_BASE_URL}/{endpoint}", timeout=5)
+                response = requests.get(
+                    f"{API_BASE_URL}/{endpoint}",
+                    timeout=API_TIMEOUT,
+                )
                 response.raise_for_status()
                 field.clear()
                 field.addItem("— Sélectionner —", None)
@@ -186,6 +200,119 @@ class AjoutCoursView(QWidget):
         except (requests.RequestException, KeyError, TypeError):
             self.status.setText("Référentiels indisponibles — démarrez le backend puis actualisez")
             self.status.setStyleSheet("color: #f39c12;")
+
+    def _reference_label(self, field, identifier):
+        index = field.findData(identifier)
+        return field.itemText(index) if index >= 0 else str(identifier or "")
+
+    def load_cours(self):
+        try:
+            response = requests.get(
+                f"{API_BASE_URL}/cours/all",
+                timeout=API_TIMEOUT,
+            )
+            response.raise_for_status()
+            self.cours_table.setRowCount(0)
+            for row, item in enumerate(response.json()):
+                self.cours_table.insertRow(row)
+                values = (
+                    item.get("Id_cours", item.get("id_cours", "")),
+                    item.get("nom_cours", item.get("Nom_cours", "")),
+                    item.get("date_cours", ""),
+                    item.get("heure_debut_cours", ""),
+                    item.get("heure_fin_cours", ""),
+                    self._reference_label(
+                        self.input_salle, item.get("id_salle_salle")
+                    ),
+                    self._reference_label(
+                        self.input_matiere, item.get("id_matiere_matiere")
+                    ),
+                )
+                for column, value in enumerate(values):
+                    self.cours_table.setItem(
+                        row, column, QTableWidgetItem(str(value))
+                    )
+                actions = QWidget()
+                actions_layout = QHBoxLayout(actions)
+                actions_layout.setContentsMargins(2, 2, 2, 2)
+                update_button = QPushButton("Modifier")
+                delete_button = QPushButton("Supprimer")
+                update_button.clicked.connect(
+                    lambda checked=False, current=item: self.update_cours(current)
+                )
+                delete_button.clicked.connect(
+                    lambda checked=False, current=item: self.delete_cours(current)
+                )
+                actions_layout.addWidget(update_button)
+                actions_layout.addWidget(delete_button)
+                self.cours_table.setCellWidget(row, 7, actions)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            self.status.setText("Impossible de charger les cours.")
+            self.status.setStyleSheet("color: #f39c12;")
+        except (requests.RequestException, KeyError, TypeError, ValueError):
+            self.status.setText("Réponse invalide du serveur.")
+            self.status.setStyleSheet("color: #f39c12;")
+
+    def update_cours(self, item):
+        self.editing_cours_id = item.get("Id_cours", item.get("id_cours"))
+        self.input_nom.setText(item.get("nom_cours", item.get("Nom_cours", "")))
+        date_value = str(item.get("date_cours", ""))[:10]
+        parsed_date = QDate.fromString(date_value, "yyyy-MM-dd")
+        if parsed_date.isValid():
+            self.input_date.setDate(parsed_date)
+        for field, value in (
+            (self.input_debut, item.get("heure_debut_cours")),
+            (self.input_fin, item.get("heure_fin_cours")),
+        ):
+            parsed_time = QTime.fromString(str(value or "")[:8], "HH:mm:ss")
+            if parsed_time.isValid():
+                field.setTime(parsed_time)
+        for field, key in (
+            (self.input_prof, "id_professeur_professeur"),
+            (self.input_salle, "id_salle_salle"),
+            (self.input_matiere, "id_matiere_matiere"),
+        ):
+            index = field.findData(item.get(key))
+            if index >= 0:
+                field.setCurrentIndex(index)
+        self.btn_save.setText("MODIFIER LE COURS")
+        self.status.setText("Modification en cours : validez avec le bouton ci-dessus.")
+
+    def delete_cours(self, item):
+        cours_id = item.get("Id_cours", item.get("id_cours"))
+        reply = QMessageBox.question(
+            self,
+            "Confirmation",
+            "Voulez-vous vraiment supprimer ce cours ?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            response = requests.delete(
+                f"{API_BASE_URL}/cours/{cours_id}",
+                timeout=API_TIMEOUT,
+            )
+            if response.status_code == 204:
+                QMessageBox.information(self, "Succès", "Cours supprimé avec succès.")
+                global_signals.data_changed.emit()
+            elif response.status_code == 409:
+                QMessageBox.warning(
+                    self, "Suppression impossible",
+                    "Ce cours possède des présences associées.",
+                )
+            elif response.status_code == 404:
+                QMessageBox.warning(self, "Introuvable", "Ce cours n'existe plus.")
+                global_signals.data_changed.emit()
+            else:
+                QMessageBox.warning(self, "Erreur", response.text)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            QMessageBox.critical(
+                self, "Erreur Réseau",
+                "Le serveur est inaccessible ou a mis trop de temps à répondre.",
+            )
+        except requests.RequestException as error:
+            QMessageBox.critical(self, "Erreur", f"Connexion serveur échouée : {error}")
 
     def submit_cours(self):
         # QTime() invalide = l'utilisateur n'a pas saisi d'heure
@@ -211,11 +338,26 @@ class AjoutCoursView(QWidget):
             return
 
         try:
-            response = requests.post(
-                f"{API_BASE_URL}/cours/create", json=data, timeout=10
+            method = requests.put if self.editing_cours_id else requests.post
+            endpoint = (
+                f"{API_BASE_URL}/cours/{self.editing_cours_id}"
+                if self.editing_cours_id
+                else f"{API_BASE_URL}/cours/create"
+            )
+            response = method(
+                endpoint,
+                json=data,
+                timeout=API_TIMEOUT,
             )
             if response.status_code in (200, 201):
-                QMessageBox.information(self, "Succès", "Cours ajouté avec succès !")
+                message = (
+                    "Cours modifié avec succès !"
+                    if self.editing_cours_id
+                    else "Cours ajouté avec succès !"
+                )
+                QMessageBox.information(self, "Succès", message)
+                self.editing_cours_id = None
+                self.btn_save.setText("ENREGISTRER LE COURS")
                 global_signals.data_changed.emit()
                 self.input_nom.clear()
                 # Remettre '--:--' (QTime() invalide)
@@ -223,10 +365,20 @@ class AjoutCoursView(QWidget):
                 self.input_fin.setTime(QTime())
                 for field in (self.input_prof, self.input_salle, self.input_matiere):
                     field.setCurrentIndex(0)
+            elif response.status_code == 404:
+                QMessageBox.warning(self, "Introuvable", response.text)
+            elif response.status_code == 409:
+                QMessageBox.warning(self, "Conflit", response.text)
             else:
                 QMessageBox.warning(
                     self, "Erreur",
                     f"Impossible d'enregistrer le cours ({response.status_code}) :\n{response.text}"
                 )
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            QMessageBox.critical(
+                self,
+                "Erreur Réseau",
+                "Le serveur est inaccessible ou a mis trop de temps à répondre.",
+            )
         except requests.RequestException as error:
             QMessageBox.critical(self, "Erreur", f"Connexion serveur échouée : {error}")

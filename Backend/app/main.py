@@ -21,6 +21,7 @@ from routes import (
     route_presence_examen,
     route_professeur,
     route_salle,
+    route_stats,
     route_surveillance,
     route_surveillance_examen,
 )
@@ -35,6 +36,7 @@ app.include_router(route_surveillance.router)
 app.include_router(route_camera.router)
 app.include_router(route_professeur.router)
 app.include_router(route_salle.router)
+app.include_router(route_stats.router)
 app.include_router(route_matiere.router)
 app.include_router(route_presence_cours.router)
 app.include_router(route_presence_examen.router)

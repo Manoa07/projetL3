@@ -47,6 +47,13 @@ def create_professeur(db: Session, data: ProfesseurCreate):
 
 def update_professeur(db: Session, professeur_id: int, data: ProfesseurCreate):
     value = get_professeur(db, professeur_id)
+    duplicate = db.query(Professeur).filter(
+        Professeur.matricule_professeur == data.matricule_professeur,
+        Professeur.id_professeur != professeur_id,
+    ).first()
+    if duplicate:
+        raise HTTPException(status_code=409, detail="Matricule déjà utilisé")
+
     for field, field_value in data.model_dump().items():
         setattr(value, field, field_value)
     try:
@@ -68,6 +75,13 @@ def delete_professeur(db: Session, professeur_id: int):
     try:
         db.delete(value)
         db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        logger.error("Professeur référencé lors de la suppression", exc_info=error)
+        raise HTTPException(
+            status_code=409,
+            detail="Le professeur est utilisé par un cours.",
+        ) from error
     except Exception as error:
         db.rollback()
         logger.error("Erreur lors de la suppression du professeur", exc_info=error)

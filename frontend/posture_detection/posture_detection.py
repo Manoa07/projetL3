@@ -6,7 +6,8 @@ import json
 import sys
 import tempfile
 import requests
-from config import API_BASE_URL
+import logging
+from config import API_BASE_URL, API_TIMEOUT
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import PoseLandmarker
 from mediapipe.tasks.python.vision import PoseLandmarkerOptions
@@ -119,7 +120,8 @@ def _l2_dist(a, b):
 last_sent = {}
 
 # WARN-03 : id_examen courant, mis à jour par l'interface avant le lancement
-current_examen_id: int = 1
+current_examen_id: int | None = None
+logger = logging.getLogger(__name__)
 
 
 def set_current_examen(id_examen: int):
@@ -129,6 +131,10 @@ def set_current_examen(id_examen: int):
 
 
 def send_alert_to_api(id_eleve, remarque):
+    if not current_examen_id:
+        logger.warning("Tentative d'envoi de surveillance sans examen actif.")
+        return
+
     key = f"{id_eleve}-{remarque}"
     now = time.time()
     if key in last_sent and now - last_sent[key] < 5:
@@ -144,7 +150,7 @@ def send_alert_to_api(id_eleve, remarque):
         requests.post(
             f"{API_BASE_URL}/surveillance/create",
             json=data,
-            timeout=2,
+            timeout=API_TIMEOUT,
         )
     except Exception as e:
         print("Erreur API :", e)

@@ -29,6 +29,7 @@ class GestionReferentielsView(QWidget):
 
         self.status = QLabel("Les identifiants sont attribués automatiquement.")
         self.status.setStyleSheet("color:#8b93a7; font-style:italic;")
+
         tabs = QTabWidget()
         tabs.addTab(self.professeur_form(), "Professeur")
         tabs.addTab(self.nom_form("Salle", "Nom de la salle", "salle"), "Salle")

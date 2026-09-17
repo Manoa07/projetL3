@@ -1,3 +1,7 @@
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+
 import cv2
 import requests
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -20,7 +24,6 @@ class PresenceThread(QThread):
         self.current_detections = []
         self.last_detection_received_time = 0.0
         self.last_detection_sent_time = 0.0
-        # Intervalle minimum entre deux requêtes d'analyse (ex: 0.3s ~ 3 requêtes/sec max)
         self.detection_interval = 0.3
 
     def run(self):
@@ -33,7 +36,13 @@ class PresenceThread(QThread):
                 self._detect_presence(frame)
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 height, width, channels = rgb.shape
-                image = QImage(rgb.data, width, height, channels * width, QImage.Format.Format_RGB888).copy()
+                image = QImage(
+                    rgb.data,
+                    width,
+                    height,
+                    channels * width,
+                    QImage.Format.Format_RGB888,
+                ).copy()
                 self.change_pixmap_signal.emit(image)
         finally:
             camera.release()
@@ -65,19 +74,23 @@ class PresenceThread(QThread):
             if orig_w > target_w:
                 scale = target_w / float(orig_w)
                 target_h = int(orig_h * scale)
-                resized = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_AREA)
+                resized = cv2.resize(
+                    frame,
+                    (target_w, target_h),
+                    interpolation=cv2.INTER_AREA,
+                )
             else:
                 scale = 1.0
                 resized = frame
 
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
-            _, buffer = cv2.imencode('.jpg', resized, encode_param)
+            _, buffer = cv2.imencode(".jpg", resized, encode_param)
 
             response = requests.post(
                 f"{API_BASE_URL}/presence/detecter",
                 files={"file": ("frame.jpg", buffer.tobytes(), "image/jpeg")},
                 data={"id_cours": self.id_cours},
-                timeout=3.0,
+                timeout=API_TIMEOUT,
             )
 
             if response.status_code == 200:
@@ -115,4 +128,3 @@ class PresenceThread(QThread):
 
 
 presenceTheard = PresenceThread
-

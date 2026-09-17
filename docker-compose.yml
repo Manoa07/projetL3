@@ -65,6 +65,13 @@ services:
       - ./frontend/models:/app/models:ro
     stdin_open: true
     tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./frontend
+          target: /app
+        - action: rebuild
+          path: ./requirements-frontend.txt
 
     develop:
       watch:

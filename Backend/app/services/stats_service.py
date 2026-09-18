@@ -55,3 +55,19 @@ def get_stats_presence(
         taux_presence=taux_presence,
         alertes_surveillance=alertes_surveillance,
     )
+
+
+def get_present_students(db: Session, date_cours: date | None = None):
+    """Return a list of Eleve objects who are marked present for target_date."""
+    target_date = date_cours or date.today()
+    # Join Presence -> Eleve and filter by date and status
+    presents_q = (
+        db.query(Eleve)
+        .join(Presence, Presence.id_eleve == Eleve.Id_eleve)
+        .filter(
+            Presence.Date_presence == target_date,
+            func.lower(Presence.Status_presence) == "present",
+        )
+        .distinct()
+    )
+    return presents_q.all()

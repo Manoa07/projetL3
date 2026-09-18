@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar, QGridLayout, QTableWidget, QTableWidgetItem, QPushButton, QFileDialog
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar, QGridLayout, QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import Qt
 from components.icon_loader import load_icon
 from components.statCard import StatCard
@@ -55,6 +55,18 @@ class StatsView(QWidget):
         chart_label.setFixedHeight(180)
         presence_vbox.addWidget(chart_label)
 
+        # 2.a Résumé statistique pour cette section (total / présents / retards / taux)
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(18)
+        self.sec_total_label = QLabel("Total élèves: —")
+        self.sec_presents_label = QLabel("Présents: —")
+        self.sec_retards_label = QLabel("Retards: —")
+        self.sec_taux_label = QLabel("Taux: —%")
+        for lbl in (self.sec_total_label, self.sec_presents_label, self.sec_retards_label, self.sec_taux_label):
+            lbl.setStyleSheet("color: #243447; font-weight: 700;")
+            stats_row.addWidget(lbl)
+        presence_vbox.addLayout(stats_row)
+
         # Table for listing students (ID hidden / Nom / Numéro / Statut) — styled like examen table
         self.presence_table = QTableWidget(0, 4)
         self.presence_table.setHorizontalHeaderLabels(["ID", "Nom", "Numéro", "Statut"])
@@ -62,18 +74,7 @@ class StatsView(QWidget):
         self.presence_table.setColumnHidden(0, True)
         presence_vbox.addWidget(self.presence_table)
 
-        # Export button (CSV) below the table
-        export_row = QHBoxLayout()
-        export_row.addStretch()
-        export_btn = QPushButton("Exporter CSV")
-        export_btn.setFixedSize(140, 32)
-        try:
-            export_btn.setIcon(load_icon("export"))
-        except Exception:
-            pass
-        export_btn.clicked.connect(lambda: self._export_table_to_csv())
-        export_row.addWidget(export_btn)
-        presence_vbox.addLayout(export_row)
+        # (No export button as requested)
         
         # Will be replaced by real data fetched from backend
         sections = []
@@ -130,7 +131,11 @@ class StatsView(QWidget):
                 pix.loadFromData(buf.getvalue(), 'PNG')
                 chart_label.setPixmap(pix.scaled(chart_label.width(), chart_label.height()))
 
-            # (Summary KPIs are shown above in the KPI cards; the detailed section displays chart + table)
+            # Populate summary labels specific to this section
+            self.sec_total_label.setText(f"Total élèves: {total}")
+            self.sec_presents_label.setText(f"Présents: {presents}")
+            self.sec_retards_label.setText(f"Retards: {retards}")
+            self.sec_taux_label.setText(f"Taux: {taux}%")
 
             # Fetch retards list
             try:
@@ -226,24 +231,4 @@ class StatsView(QWidget):
 
         layout.addStretch()
 
-    def _export_table_to_csv(self):
-        # Open save dialog
-        path, _ = QFileDialog.getSaveFileName(self, "Exporter CSV", "presences.csv", "CSV Files (*.csv)")
-        if not path:
-            return
-        import csv
-        # Read table content and write CSV
-        try:
-            with open(path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                # headers (include ID column)
-                headers = [self.presence_table.horizontalHeaderItem(c).text() for c in range(self.presence_table.columnCount())]
-                writer.writerow(headers)
-                for row in range(self.presence_table.rowCount()):
-                    rowdata = []
-                    for col in range(self.presence_table.columnCount()):
-                        item = self.presence_table.item(row, col)
-                        rowdata.append(item.text() if item else '')
-                    writer.writerow(rowdata)
-        except Exception as e:
-            print('Export CSV error:', e)
+    # CSV export removed per request

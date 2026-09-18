@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar, QGridLayout, QTableWidget, QTableWidgetItem
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar, QGridLayout, QTableWidget, QTableWidgetItem, QPushButton, QFileDialog
 from PyQt6.QtCore import Qt
 from components.icon_loader import load_icon
 from components.statCard import StatCard
@@ -61,6 +61,19 @@ class StatsView(QWidget):
         configure_table(self.presence_table)
         self.presence_table.setColumnHidden(0, True)
         presence_vbox.addWidget(self.presence_table)
+
+        # Export button (CSV) below the table
+        export_row = QHBoxLayout()
+        export_row.addStretch()
+        export_btn = QPushButton("Exporter CSV")
+        export_btn.setFixedSize(140, 32)
+        try:
+            export_btn.setIcon(load_icon("export"))
+        except Exception:
+            pass
+        export_btn.clicked.connect(lambda: self._export_table_to_csv())
+        export_row.addWidget(export_btn)
+        presence_vbox.addLayout(export_row)
         
         # Will be replaced by real data fetched from backend
         sections = []
@@ -160,6 +173,29 @@ class StatsView(QWidget):
                 self.presence_table.setItem(row_idx, 1, QTableWidgetItem(info['nom']))
                 self.presence_table.setItem(row_idx, 2, QTableWidgetItem(str(info['numero'])))
                 self.presence_table.setItem(row_idx, 3, QTableWidgetItem(info['status']))
+
+    def _export_table_to_csv(self):
+        # Open save dialog
+        path, _ = QFileDialog.getSaveFileName(self, "Exporter CSV", "presences.csv", "CSV Files (*.csv)")
+        if not path:
+            return
+        import csv
+        # Read table content and write CSV
+        try:
+            with open(path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                # headers (exclude hidden ID column if desired, but include for completeness)
+                headers = [self.presence_table.horizontalHeaderItem(c).text() for c in range(self.presence_table.columnCount())]
+                writer.writerow(headers)
+                for row in range(self.presence_table.rowCount()):
+                    rowdata = []
+                    for col in range(self.presence_table.columnCount()):
+                        item = self.presence_table.item(row, col)
+                        rowdata.append(item.text() if item else '')
+                    writer.writerow(rowdata)
+        except Exception as e:
+            # simple fallback: print error to console
+            print('Export CSV error:', e)
         except requests.RequestException:
             # Fall back to sample data on error
             sections = [

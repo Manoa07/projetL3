@@ -50,10 +50,7 @@ class StatsView(QWidget):
         section_title = QLabel("Présences par section")
         section_title.setStyleSheet("color: #17212b; font-weight: 700;")
         presence_vbox.addWidget(section_title)
-        # Chart label will display the presence/retards timeseries
-        chart_label = QLabel()
-        chart_label.setFixedHeight(180)
-        presence_vbox.addWidget(chart_label)
+        # Chart label will display the presence/retards timeseries (placed after totals)
 
         # 2.a Résumé statistique pour cette section (valeurs stylées)
         stats_row = QHBoxLayout()
@@ -72,16 +69,19 @@ class StatsView(QWidget):
             )
             return w
 
-        self.stat_total = make_stat_widget("Total élèves")
         self.stat_presents = make_stat_widget("Présents")
         self.stat_retards = make_stat_widget("Retards")
         self.stat_taux = make_stat_widget("Taux")
 
-        stats_row.addWidget(self.stat_total)
         stats_row.addWidget(self.stat_presents)
         stats_row.addWidget(self.stat_retards)
         stats_row.addWidget(self.stat_taux)
         presence_vbox.addLayout(stats_row)
+
+        # Now add the chart below the totals
+        chart_label = QLabel()
+        chart_label.setFixedHeight(180)
+        presence_vbox.addWidget(chart_label)
 
         # Table for listing students (ID hidden / Nom / Numéro / Statut) — styled like examen table
         self.presence_table = QTableWidget(0, 4)
@@ -147,8 +147,7 @@ class StatsView(QWidget):
                 pix.loadFromData(buf.getvalue(), 'PNG')
                 chart_label.setPixmap(pix.scaled(chart_label.width(), chart_label.height()))
 
-            # Update styled stat widgets
-            self.stat_total.setText(f"<div style='font-weight:700;font-size:16px'>{total}</div><div style='color:#7a7c8c;font-size:11px'>Total élèves</div>")
+            # Update styled stat widgets (no total - top KPIs already show totals)
             self.stat_presents.setText(f"<div style='font-weight:700;font-size:16px'>{presents}</div><div style='color:#7a7c8c;font-size:11px'>Présents</div>")
             self.stat_retards.setText(f"<div style='font-weight:700;font-size:16px'>{retards}</div><div style='color:#7a7c8c;font-size:11px'>Retards</div>")
             self.stat_taux.setText(f"<div style='font-weight:700;font-size:16px'>{taux}%</div><div style='color:#7a7c8c;font-size:11px'>Taux</div>")

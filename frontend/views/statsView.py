@@ -76,26 +76,39 @@ class StatsView(QWidget):
         retards_val = stats.get('retards', 0)
         taux_val = stats.get('taux_presence', 0.0)
 
+        from matplotlib import patches
+
         def make_donut(value, total_for_pct, color, center_text=None, size=(140, 140)):
+            # Draw donut using Wedge patches to avoid pie seams and antialias artifacts
             fig, ax = plt.subplots(figsize=(size[0]/100, size[1]/100), dpi=100)
             frac = float(value) / float(total_for_pct) if total_for_pct else 0.0
             frac = max(0.0, min(frac, 1.0))
-            sizes = [frac, 1 - frac]
-            colors = [color, '#e9eef3']
-            # eliminate seam: no edge lines, disable antialiasing on wedges
-            wedges, _ = ax.pie(
-                sizes,
-                colors=colors,
-                startangle=90,
-                wedgeprops=dict(width=0.32, linewidth=0, edgecolor=color, antialiased=False)
-            )
-            ax.set(aspect="equal")
+            inner_r = 0.62
+            outer_r = 1.0
+            start_angle = 90
+            end_angle = start_angle - 360 * frac
+
+            # background ring (full circle, light color)
+            bg = patches.Wedge((0, 0), outer_r, 0, 360, width=outer_r - inner_r, facecolor='#e9eef3', linewidth=0)
+            ax.add_patch(bg)
+
+            # foreground arc only when frac > 0
+            if frac > 0:
+                fg = patches.Wedge((0, 0), outer_r, end_angle, start_angle, width=outer_r - inner_r, facecolor=color, linewidth=0)
+                ax.add_patch(fg)
+
+            # ensure equal aspect and clear axes
+            ax.set_xlim(-1.05, 1.05)
+            ax.set_ylim(-1.05, 1.05)
+            ax.set_aspect('equal')
             ax.axis('off')
-            plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
             # center text
             if center_text is None:
                 center_text = f"{int(value)}"
             ax.text(0, 0, center_text, ha='center', va='center', fontsize=10, color='#17212b', weight='700')
+
+            plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
             buf = io.BytesIO()
             fig.savefig(buf, format='png', transparent=True)
             plt.close(fig)

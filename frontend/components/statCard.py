@@ -16,9 +16,13 @@ class StatCard(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
-        val_label = QLabel(value)
-        val_label.setStyleSheet(f"font-size: 24px; font-weight: 800; color: {color};")
+        self.value_label = QLabel(value)
+        self.value_label.setStyleSheet(f"font-size: 24px; font-weight: 800; color: {color};")
         title_label = QLabel(title)
         title_label.setStyleSheet("color: #718096; font-size: 11px; letter-spacing: 0.4px;")
-        layout.addWidget(val_label)
+        layout.addWidget(self.value_label)
         layout.addWidget(title_label)
+
+    def set_value(self, value: str):
+        """Update the displayed value on the card."""
+        self.value_label.setText(value)

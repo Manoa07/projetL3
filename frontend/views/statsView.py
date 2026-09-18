@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, Q
 from PyQt6.QtCore import Qt
 from components.icon_loader import load_icon
 from components.statCard import StatCard
+import requests
+from config import API_BASE_URL, API_TIMEOUT
 
 class StatsView(QWidget):
     def __init__(self):
@@ -15,14 +17,14 @@ class StatsView(QWidget):
         title = QLabel("<b style='color:#17212b; font-size:18px; letter-spacing: 1px;'>SUIVI DES PRÉSENCES</b>")
         layout.addWidget(title)
         
-        # 1. Cartes de statistiques (KPI) pour une lecture rapide 
+        # 1. Cartes de statistiques (KPI) pour une lecture rapide
         kpi_layout = QHBoxLayout()
-        # Taux de présence global calculé par l'IA 
-        kpi_layout.addWidget(StatCard("Taux", "96%", "#243447"))
-        # Nombre d'élèves absents détectés 
-        kpi_layout.addWidget(StatCard("Absents", "1 / 25", "#e74c3c"))
-        # Retardataires identifiés après l'horaire précis [cite: 8]
-        kpi_layout.addWidget(StatCard("Retards", "2", "#f39c12"))
+        self.card_taux = StatCard("Taux", "--%", "#243447")
+        self.card_absents = StatCard("Absents", "-- / --", "#e74c3c")
+        self.card_retards = StatCard("Retards", "--", "#f39c12")
+        kpi_layout.addWidget(self.card_taux)
+        kpi_layout.addWidget(self.card_absents)
+        kpi_layout.addWidget(self.card_retards)
         layout.addLayout(kpi_layout)
 
         # 2. Section détaillée par salle/classe 
@@ -43,13 +45,34 @@ class StatsView(QWidget):
         section_title.setStyleSheet("color: #17212b; font-weight: 700;")
         presence_vbox.addWidget(section_title)
         
-        # Simulation de données pour différentes sections de l'ISPM [cite: 19, 23]
-        sections = [
-            ("Salle A (L3 ISAIA)", 24, 25), 
-            ("Salle B (L3 IT)", 18, 20), 
-            ("Amphithéâtre (L2)", 45, 50)
-        ]
-        
+        # Will be replaced by real data fetched from backend
+        sections = []
+
+        try:
+            resp = requests.get(f"{API_BASE_URL}/stats/presence", timeout=API_TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+            total = data.get("total_eleves", 0)
+            presents = data.get("presents", 0)
+            absents = data.get("absents", max(total - presents, 0))
+            retards = data.get("retards", 0)
+            taux = data.get("taux_presence", 0.0)
+
+            # Update KPI cards
+            self.card_taux.set_value(f"{taux}%")
+            self.card_absents.set_value(f"{absents} / {total}")
+            self.card_retards.set_value(str(retards))
+
+            # Single global section for now (per-room breakdown not implemented in API)
+            sections.append(("Général", presents, total))
+        except requests.RequestException:
+            # Fall back to sample data on error
+            sections = [
+                ("Salle A (L3 ISAIA)", 24, 25),
+                ("Salle B (L3 IT)", 18, 20),
+                ("Amphithéâtre (L2)", 45, 50),
+            ]
+
         for salle, count, total in sections:
             row = QHBoxLayout()
             row.setSpacing(12)

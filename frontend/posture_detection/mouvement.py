@@ -14,7 +14,7 @@ SUSPICION_WEIGHTS = {
     "Regarde voisin gauche": 4,
     "Regarde voisin droite": 4,
     "Main sous table": 3,
-    "Regarde antiseche jambe": 5,
+    "Regarde l'antisèche / les jambes": 5,
     "Possible chuchotement": 5,
     # Labels directs issus des classes du modèle entraîné
     "regarde_voisin_gauche": 4,
@@ -86,7 +86,7 @@ def detect_suspicious_movements(points):
         "regarde_voisin_gauche": "Regarde voisin gauche",
         "regarde_voisin_droite": "Regarde voisin droite",
         "main_sous_table": "Main sous la table",
-        "regarde_antiseche": "Regarde antiseche / jambes",
+        "regarde_antiseche": "Regarde l'antisèche / les jambes",
         "bras_vers_voisin": "Bras vers voisin",
     }.get(label, label)
 

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pickle
 from keras_facenet import FaceNet
 import requests
+from config import API_BASE_URL, API_TIMEOUT
 class SystemePresence:
     """
     Système de présence par reconnaissance faciale utilisant l'API PostgreSQL.
@@ -39,16 +40,19 @@ class SystemePresence:
     def charger_base(self):
         """Charge les embeddings depuis la base pour la comparaison rapide."""
         try:
-            reponse = requests.get("http://localhost:8000/eleve/all")
-            eleves = reponse.json()
+            reponse = requests.get(
+                f"{API_BASE_URL}/eleve/embeddings",
+                timeout=API_TIMEOUT,
+            )
+            reponse.raise_for_status()
+            embeddings = reponse.json()
             base = {}
-            for eleve in eleves:
-                nom_complet = f"{eleve['Nom_eleve']} {eleve['Prenom_eleve']} "
-                # BUG-13 : ignorer les élèves sans embedding pour éviter crash numpy
-                if eleve.get("embedding") is None:
+            for raw_id, raw_embedding in embeddings.items():
+                if raw_embedding is None:
                     continue
-                embedding = np.array(eleve["embedding"])
-                base[nom_complet] = (eleve["Numero_eleve"], embedding)
+                eleve_id = int(raw_id)
+                embedding = np.asarray(raw_embedding, dtype=np.float32)
+                base[str(eleve_id)] = (eleve_id, embedding)
             return base
         except Exception as e:
             print(e)
@@ -104,8 +108,9 @@ class SystemePresence:
         }
         try:
             reponse = requests.post(
-                "http://localhost:8000/presence/create",
-                json=data
+                f"{API_BASE_URL}/presence/create",
+                json=data,
+                timeout=API_TIMEOUT,
             )
             if reponse.status_code == 200:
                 print(f"Présence enregistrée pour {nom_complet}")
@@ -207,9 +212,10 @@ class SystemePresence:
         }
         try:
             response = requests.post(
-            "http://localhost:8000/eleve/create",
-            data=data,
-            files=files
+                f"{API_BASE_URL}/eleve/create",
+                data=data,
+                files=files,
+                timeout=API_TIMEOUT,
             )
             print(response.json())
         except Exception as e:

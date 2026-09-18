@@ -2,7 +2,8 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    API_BASE_URL=http://backend:8000
 
 WORKDIR /app
 
@@ -21,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libx11-xcb1 \
     libegl1 \
     libgl1 \
+    libfontconfig1 \
+    libdbus-1-3 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \

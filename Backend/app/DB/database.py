@@ -7,9 +7,15 @@ from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-_env_file = Path(__file__).resolve().parents[3] / ".env"
-if _env_file.exists():
-    load_dotenv(dotenv_path=_env_file)
+database_file = Path(__file__).resolve()
+env_candidates = [database_file.parent.parent.parent / ".env"]
+if len(database_file.parents) > 3:
+    env_candidates.append(database_file.parents[3] / ".env")
+
+for env_file in env_candidates:
+    if env_file.exists():
+        load_dotenv(dotenv_path=env_file)
+        break
 else:
     load_dotenv()
 
@@ -19,7 +25,10 @@ if not DATABASE_URL:
 if not DATABASE_URL.startswith(("postgresql://", "postgresql+psycopg2://")):
     raise RuntimeError("DATABASE_URL must use PostgreSQL.")
 
-engine = create_engine(DATABASE_URL, connect_args={"options": "-c client_encoding=UTF8"})
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"options": "-c client_encoding=UTF8"},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

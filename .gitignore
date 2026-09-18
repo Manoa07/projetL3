@@ -28,3 +28,7 @@ frontend/.vscode/
 
 
 .env
+Backend/app/upload/
+*.pt
+*.task
+*.pkl

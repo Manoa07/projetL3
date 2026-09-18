@@ -33,3 +33,4 @@ qasync
 requests
 httpx
 mediapipe
+ultralytics>=8.3.0,<9

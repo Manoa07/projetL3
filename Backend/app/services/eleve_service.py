@@ -1,3 +1,4 @@
+import logging
 import pickle
 import shutil
 from sqlalchemy.exc import IntegrityError
@@ -7,7 +8,15 @@ import cv2
 from fastapi import HTTPException
 import numpy as np
 from models.eleve import Eleve
+from models.detection import Detection
+from models.presence import Presence
+from models.presence_cours import PresenceCours
+from models.presence_examen import PresenceExamen
+from models.surveillance import Surveillance
 from sqlalchemy import and_
+
+
+logger = logging.getLogger(__name__)
 
 # WARN-05 : instances partagées (singletons) — chargées une seule fois au démarrage
 # modules/presence.py utilise les mêmes via _get_detector() / _get_embedder()
@@ -40,6 +49,8 @@ def create_eleve(eleve, photo, images, db):
     detector = _get_detector()
     embedder = _get_embedder()
 
+    images_a_traiter = images or [photo]
+
     eleve_verifie = db.query(Eleve).filter(
         and_(
             Eleve.Nom_eleve == eleve.Nom_eleve,
@@ -49,7 +60,7 @@ def create_eleve(eleve, photo, images, db):
 
     # Calcul des embeddings depuis les images fournies
     embedding = []
-    for image in images:
+    for image in images_a_traiter:
         image.file.seek(0)
         contenu = image.file.read()
         tableau = np.frombuffer(contenu, np.uint8)
@@ -82,6 +93,7 @@ def create_eleve(eleve, photo, images, db):
             Prenom_eleve=eleve.Prenom_eleve,
             Classe_eleve=eleve.Classe_eleve,
             Numero_eleve=eleve.Numero_eleve,
+            matricule_eleve=eleve.matricule_eleve,
             photo_eleve=filename,           # WARN-02 : nom de fichier uniquement
             embedding=pickle.dumps(finale_embedding),
         )
@@ -91,7 +103,15 @@ def create_eleve(eleve, photo, images, db):
             db.refresh(new_eleve)
         except IntegrityError as e:
             db.rollback()
+            logger.error("Erreur d'intégrité lors de la création de l'élève", exc_info=e)
             raise HTTPException(status_code=409, detail="Numéro d'élève déjà utilisé.") from e
+        except Exception as e:
+            db.rollback()
+            logger.error("Erreur lors de la création de l'élève", exc_info=e)
+            raise HTTPException(
+                status_code=500,
+                detail="Erreur interne lors de la création de l'élève.",
+            ) from e
 
         return {
             "Numero_eleve": new_eleve.Numero_eleve,
@@ -139,8 +159,8 @@ def get_eleve(db):
                     emb = pickle.loads(e.embedding)
                 elif isinstance(e.embedding, str):
                     emb = np.array(json.loads(e.embedding), dtype=np.float32)
-            except Exception as err:
-                print("Erreur décodage embedding :", err)
+            except Exception:
+                logger.exception("Erreur lors du décodage de l'embedding")
 
         resultat.append({
             "Id_eleve":    e.Id_eleve,
@@ -171,3 +191,147 @@ def get_eleve_id(eleve_num, eleve_class, db):
     if not eleve_verifie:
         raise HTTPException(status_code=404, detail="Élève introuvable.")
     return eleve_verifie
+
+
+def get_eleve_embeddings(db):
+    embeddings = {}
+    for eleve in db.query(Eleve.Id_eleve, Eleve.embedding).yield_per(100):
+        if not eleve.embedding:
+            continue
+        try:
+            embedding = pickle.loads(eleve.embedding)
+            embeddings[eleve.Id_eleve] = np.asarray(
+                embedding,
+                dtype=np.float32,
+            ).tolist()
+        except Exception:
+            logger.exception(
+                "Erreur lors du décodage de l'embedding de l'élève %s",
+                eleve.Id_eleve,
+            )
+    return embeddings
+
+
+def get_eleve_by_id(db, eleve_id):
+    eleve = db.query(Eleve).filter(Eleve.Id_eleve == eleve_id).first()
+    if not eleve:
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
+    return eleve
+
+
+def update_eleve(db, eleve_id, data):
+    eleve = get_eleve_by_id(db, eleve_id)
+    duplicate = db.query(Eleve).filter(
+        and_(
+            Eleve.Nom_eleve == data.Nom_eleve,
+            Eleve.Prenom_eleve == data.Prenom_eleve,
+            Eleve.Numero_eleve == data.Numero_eleve,
+            Eleve.Id_eleve != eleve_id,
+        )
+    ).first()
+    if duplicate:
+        raise HTTPException(
+            status_code=409,
+            detail="Un élève avec ces informations existe déjà.",
+        )
+
+    for field, value in {
+        "Nom_eleve": data.Nom_eleve,
+        "Prenom_eleve": data.Prenom_eleve,
+        "Classe_eleve": data.Classe_eleve,
+        "Numero_eleve": data.Numero_eleve,
+        "matricule_eleve": data.matricule_eleve,
+    }.items():
+        setattr(eleve, field, value)
+
+    try:
+        db.commit()
+        db.refresh(eleve)
+        return eleve
+    except IntegrityError as error:
+        db.rollback()
+        logger.error(
+            "Erreur d'intégrité lors de la mise à jour de l'élève",
+            exc_info=error,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="Le numéro d'élève est déjà utilisé.",
+        ) from error
+    except Exception as error:
+        db.rollback()
+        logger.error(
+            "Erreur lors de la mise à jour de l'élève",
+            exc_info=error,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur interne lors de la mise à jour de l'élève.",
+        ) from error
+
+
+def delete_eleve(db, eleve_id):
+    eleve = get_eleve_by_id(db, eleve_id)
+    has_presence = db.query(Presence.id_presence).filter(
+        Presence.id_eleve == eleve_id
+    ).first()
+    has_presence_cours = db.query(
+        PresenceCours.id_presence_cours
+    ).filter(
+        PresenceCours.id_eleve_eleve == eleve_id
+    ).first()
+    has_presence_examen = db.query(
+        PresenceExamen.id_presence_examen
+    ).filter(
+        PresenceExamen.id_eleve_eleve == eleve_id
+    ).first()
+    has_surveillance = db.query(
+        Surveillance.Id_surveillance
+    ).filter(
+        Surveillance.id_eleve == eleve_id
+    ).first()
+    has_detection = db.query(
+        Detection.id_detection
+    ).filter(
+        Detection.id_eleve_eleve == eleve_id
+    ).first()
+
+    if any((
+        has_presence,
+        has_presence_cours,
+        has_presence_examen,
+        has_surveillance,
+        has_detection,
+    )):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Cet élève possède des présences, surveillances ou "
+                "détections associées. La suppression physique est interdite "
+                "pour préserver l'historique."
+            ),
+        )
+
+    try:
+        db.delete(eleve)
+        db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        logger.error(
+            "Élève référencé lors de la suppression",
+            exc_info=error,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Cet élève possède des données associées. "
+                "La suppression physique est interdite."
+            ),
+        ) from error
+    except Exception as error:
+        db.rollback()
+        logger.error("Erreur lors de la suppression de l'élève", exc_info=error)
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur interne lors de la suppression de l'élève.",
+        ) from error

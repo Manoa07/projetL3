@@ -17,7 +17,7 @@ from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
 from views.liveView import LiveView
 from views.elevesView import ElevesView
-from views.statsView import StatsView
+# Stats removed from Surveillance interface (moved to Presence)
 from components.alertCard import AlertCard 
 
 class SurveillanceInterface(QWidget):
@@ -86,12 +86,10 @@ class SurveillanceInterface(QWidget):
 
         self.btn_live = self.create_nav_btn("Direct", 0, load_icon("live"))
         self.btn_eleves = self.create_nav_btn("Élèves", 1, load_icon("users"))
-        self.btn_stats = self.create_nav_btn("Statistiques", 2, load_icon("chart"))
         self.btn_live.setChecked(True)
 
         sidebar_layout.addWidget(self.btn_live)
         sidebar_layout.addWidget(self.btn_eleves)
-        sidebar_layout.addWidget(self.btn_stats)
         sidebar_layout.addStretch()
 
         sidebar_divider = QFrame()
@@ -123,8 +121,7 @@ class SurveillanceInterface(QWidget):
         # --- B. ZONE CENTRALE (STACK) ---
         self.stack = QStackedWidget()
         self.setup_placeholder_page()
-        self.stack.addWidget(ElevesView()) 
-        self.stack.addWidget(StatsView())  
+        self.stack.addWidget(ElevesView())
         self.stack.setStyleSheet("background: transparent;")
         layout.addWidget(self.stack)
         self.setup_alerts_panel(layout)
@@ -190,7 +187,6 @@ class SurveillanceInterface(QWidget):
         labels = {
             self.btn_live: "Surveillance en direct",
             self.btn_eleves: "Élèves",
-            self.btn_stats: "Statistiques",
         }
         for button, tooltip in labels.items():
             button.setText("" if compact else tooltip)

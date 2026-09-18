@@ -19,6 +19,7 @@ from components.theme import NAV_BUTTON_STYLE
 from components.cameraView import CameraView
 from views.elevesView import ElevesView
 from views.ajoutEleveView import AjoutEleveView
+from views.statsView import StatsView
 from views.ajoutCoursView import AjoutCoursView
 from views.ajoutExamenView import AjoutExamenView
 from views.gestionReferentielsView import GestionReferentielsView
@@ -86,14 +87,16 @@ class PresenceInterface(QWidget):
 
         self.btn_cam = self.create_nav_btn("Direct", 0, load_icon("live"))
         self.btn_list = self.create_nav_btn("Élèves", 1, load_icon("users"))
-        self.btn_add = self.create_nav_btn("Ajouter", 2, load_icon("add"))
-        self.btn_add_cours = self.create_nav_btn("Cours", 3, load_icon("course"))
-        self.btn_add_examen = self.create_nav_btn("Examen", 4, load_icon("course"))
-        self.btn_data = self.create_nav_btn("Données", 5, load_icon("add"))
+        self.btn_stats = self.create_nav_btn("Statistiques", 2, load_icon("chart"))
+        self.btn_add = self.create_nav_btn("Ajouter", 3, load_icon("add"))
+        self.btn_add_cours = self.create_nav_btn("Cours", 4, load_icon("course"))
+        self.btn_add_examen = self.create_nav_btn("Examen", 5, load_icon("course"))
+        self.btn_data = self.create_nav_btn("Données", 6, load_icon("add"))
         self.btn_cam.setChecked(True)
 
         sidebar_layout.addWidget(self.btn_cam)
         sidebar_layout.addWidget(self.btn_list)
+        sidebar_layout.addWidget(self.btn_stats)
         sidebar_layout.addWidget(self.btn_add)
         sidebar_layout.addWidget(self.btn_add_cours)
         sidebar_layout.addWidget(self.btn_add_examen)
@@ -138,10 +141,11 @@ class PresenceInterface(QWidget):
         
         # Autres pages
         self.stack.addWidget(ElevesView()) # Index 1
-        self.stack.addWidget(AjoutEleveView()) # Index 2
-        self.stack.addWidget(AjoutCoursView()) # Index 3
-        self.stack.addWidget(AjoutExamenView()) # Index 4
-        self.stack.addWidget(GestionReferentielsView()) # Index 5
+        self.stack.addWidget(StatsView())  # Index 2 (moved here)
+        self.stack.addWidget(AjoutEleveView()) # Index 3
+        self.stack.addWidget(AjoutCoursView()) # Index 4
+        self.stack.addWidget(AjoutExamenView()) # Index 5
+        self.stack.addWidget(GestionReferentielsView()) # Index 6
 
         self.stack.setStyleSheet("background: transparent;")
         layout.addWidget(self.stack, stretch=5)

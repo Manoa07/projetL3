@@ -62,7 +62,7 @@ def configure_dialog(dialog):
 APP_STYLESHEET = """
 QWidget {
     color: #17212b;
-    font-family: 'Segoe UI';
+    font-family: 'Segoe UI Variable';
     font-size: 12px;
 }
 

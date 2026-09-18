@@ -142,16 +142,23 @@ class StatsView(QWidget):
             except requests.RequestException:
                 retards_list = []
 
-            # Build a combined students dict keyed by Id_eleve
+            # Build a combined students dict keyed by Id_eleve or Numero; fallback to index
             students = {}
-            for s in present_list:
-                students[s.get('Id_eleve')] = {
+            def student_key(s, idx):
+                return s.get('Id_eleve') or s.get('Numero_eleve') or f"idx_{idx}"
+
+            for idx, s in enumerate(present_list):
+                key = student_key(s, idx)
+                students[key] = {
                     'nom': f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}",
                     'numero': s.get('Numero_eleve') or '',
                     'status': 'Présent'
                 }
-            for s in retards_list:
-                students[s.get('Id_eleve')] = {
+
+            for idx, s in enumerate(retards_list):
+                key = student_key(s, idx)
+                # If already present as Présent, prefer Retard (overwrite), otherwise add
+                students[key] = {
                     'nom': f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}",
                     'numero': s.get('Numero_eleve') or '',
                     'status': 'Retard'
@@ -159,7 +166,7 @@ class StatsView(QWidget):
 
             # Populate table
             self.presence_table.setRowCount(0)
-            for row_idx, (id_e, info) in enumerate(students.items()):
+            for row_idx, info in enumerate(students.values()):
                 self.presence_table.insertRow(row_idx)
                 self.presence_table.setItem(row_idx, 0, QTableWidgetItem(info['nom']))
                 self.presence_table.setItem(row_idx, 1, QTableWidgetItem(str(info['numero'])))
@@ -214,5 +221,5 @@ class StatsView(QWidget):
         info_row.addStretch()
         layout.addLayout(info_row)
         
-        # Espace flexible pour pousser le contenu vers le haut
+
         layout.addStretch()

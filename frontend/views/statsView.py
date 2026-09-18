@@ -82,8 +82,15 @@ class StatsView(QWidget):
             frac = max(0.0, min(frac, 1.0))
             sizes = [frac, 1 - frac]
             colors = [color, '#e9eef3']
-            wedges, _ = ax.pie(sizes, colors=colors, startangle=90, wedgeprops=dict(width=0.32, edgecolor='white'))
+            # remove white seam by disabling edge lines and hiding axes
+            wedges, _ = ax.pie(
+                sizes,
+                colors=colors,
+                startangle=90,
+                wedgeprops=dict(width=0.32, linewidth=0)
+            )
             ax.set(aspect="equal")
+            ax.axis('off')
             plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
             # center text
             if center_text is None:

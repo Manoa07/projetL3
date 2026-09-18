@@ -65,6 +65,19 @@ class StatsView(QWidget):
 
             # Single global section for now (per-room breakdown not implemented in API)
             sections.append(("Général", presents, total))
+            # Fetch list of present students for display
+            try:
+                resp2 = requests.get(f"{API_BASE_URL}/stats/presence/presents", timeout=API_TIMEOUT)
+                resp2.raise_for_status()
+                present_list = resp2.json()
+            except requests.RequestException:
+                present_list = []
+
+            # Display present students as a simple comma-separated line
+            names = ", ".join([f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}" for s in present_list])
+            present_label = QLabel(f"Présents: {names if names else '—'}")
+            present_label.setStyleSheet("color: #243447; font-weight: 600;")
+            presence_vbox.addWidget(present_label)
         except requests.RequestException:
             # Fall back to sample data on error
             sections = [

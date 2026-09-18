@@ -40,3 +40,27 @@ def get_present_students(
         }
         for s in students
     ]
+
+
+@router.get('/presence/retards')
+def get_retard_students(
+    date_cours: date | None = None,
+    db: Session = Depends(get_db),
+):
+    students = stats_service.get_retard_students(db, date_cours)
+    return [
+        {
+            'Id_eleve': s.Id_eleve,
+            'Nom_eleve': s.Nom_eleve,
+            'Prenom_eleve': s.Prenom_eleve,
+            'Classe_eleve': s.Classe_eleve,
+            'Numero_eleve': s.Numero_eleve,
+        }
+        for s in students
+    ]
+
+
+@router.get('/presence/timeseries')
+def get_presence_timeseries(days: int = 7, db: Session = Depends(get_db)):
+    """Return timeseries for presents and retards for the last `days` days."""
+    return stats_service.get_presence_timeseries(db, days=days)

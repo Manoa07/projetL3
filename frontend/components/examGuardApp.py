@@ -62,7 +62,8 @@ class ExamGuardApp(QMainWindow):
         """)
         layout = QVBoxLayout(home_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setContentsMargins(36, 36, 36, 36)
+        # réduire la marge haute de 20px pour uniformiser l'espacement
+        layout.setContentsMargins(16, 36, 36, 36)
         layout.setSpacing(16)
 
         logo_label = QLabel()

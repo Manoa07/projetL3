@@ -17,7 +17,7 @@ class ElevesView(QWidget):
         
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(4, 24, 24, 24)
         layout.setSpacing(14)
         header = QHBoxLayout()
         heading = QVBoxLayout()
@@ -85,7 +85,11 @@ class ElevesView(QWidget):
             }
         """)
 
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        # reserve space for action buttons to avoid truncation
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        self.table.setColumnWidth(3, 420)
         self.table.verticalHeader().setDefaultSectionSize(42)
         self.table.setShowGrid(False)
         layout.addWidget(self.table)
@@ -187,6 +191,7 @@ class ElevesView(QWidget):
             for button in (history_button, update_button, delete_button):
                 button.setMinimumHeight(30)
                 button.setCursor(Qt.CursorShape.PointingHandCursor)
+                button.setMinimumWidth(80)
             history_button.setStyleSheet(
                 "QPushButton { background:#eef4ff; color:#2459bd; border:1px solid #bdd0f7; "
                 "border-radius:7px; padding:4px 8px; font-weight:700; }"

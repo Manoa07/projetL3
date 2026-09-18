@@ -40,12 +40,12 @@ def configure_dialog(dialog):
             alternate-background-color: #f6f8fb;
             selection-background-color: #dbe7ff;
             selection-color: #17212b;
-            gridline-color: #d8e0e8;
+            gridline-color: transparent;
         }
         QDialog QHeaderView::section {
             background: #e6ebf0;
             color: #17212b;
-            border: 1px solid #d8e0e8;
+            border: none;
             padding: 6px;
             font-weight: 700;
         }
@@ -205,12 +205,13 @@ QCalendarWidget QTableView {
 QTableWidget {
     background-color: #ffffff;
     color: #17212b;
-    gridline-color: #e4e9ef;
+    gridline-color: transparent;
     alternate-background-color: #f6f8fb;
     selection-background-color: #dfe5eb;
     selection-color: #17212b;
     min-height: 220px;
     max-height: 320px;
+    border: none;
 }
 
 QTableWidget QAbstractItemView {
@@ -224,10 +225,12 @@ QHeaderView::section,
 QTableWidget QHeaderView::section {
     background-color: #e6ebf0;
     color: #17212b;
-    border: 1px solid #d8e0e8;
+    border: none;
     padding: 6px;
     font-weight: 700;
 }
+
+QTableWidget::item { border: none; }
 
 QDateEdit {
     selection-background-color: #243447;

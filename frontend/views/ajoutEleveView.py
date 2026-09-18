@@ -66,7 +66,7 @@ class AjoutEleveView(QWidget):
         container.setStyleSheet("QWidget#AjoutEleveContainer { background-color: #f6f8fb; }")
         layout = QVBoxLayout(container)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(4, 24, 24, 24)
         layout.setSpacing(18)
 
         title = QLabel("<b style='color:#17212b; font-size:20px; letter-spacing: 1.4px;'>AJOUT ÉLÈVE</b>")

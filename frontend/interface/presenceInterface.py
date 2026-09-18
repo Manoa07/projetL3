@@ -15,7 +15,7 @@ from pathlib import Path
 import requests
 from config import API_BASE_URL, API_TIMEOUT
 from components.icon_loader import load_icon
-from components.theme import NAV_BUTTON_STYLE
+from components.theme import NAV_BUTTON_STYLE, ACTION_BUTTON_STYLE
 from components.cameraView import CameraView
 from views.elevesView import ElevesView
 from views.ajoutEleveView import AjoutEleveView
@@ -179,7 +179,7 @@ class PresenceInterface(QWidget):
         """Crée l'interface d'attente avec le bouton de démarrage"""
         self.cam_placeholder = QWidget()
         placeholder_layout = QVBoxLayout(self.cam_placeholder)
-        placeholder_layout.setContentsMargins(24, 24, 24, 24)
+        placeholder_layout.setContentsMargins(4, 24, 24, 24)
         placeholder_layout.setSpacing(16)
         title = QLabel("<b style='color:#2f6fed; font-size:18px;'>POINTAGE : RECONNAISSANCE FACIALE</b>")
         placeholder_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
@@ -202,17 +202,20 @@ class PresenceInterface(QWidget):
         self.start_btn = QPushButton("ACTIVER LE SCAN DE PRÉSENCE")
         self.start_btn.setIcon(load_icon("play"))
         self.start_btn.setFixedSize(300, 70)
-        self.start_btn.setStyleSheet("""
+        # Harmonize with global action button style (rounded, bold)
+        self.start_btn.setStyleSheet(
+            ACTION_BUTTON_STYLE +
+            """
             QPushButton {
-                background: #2f6fed;
-                color: white;
-                font-weight: 700;
-                border-radius: 12px;
+                background: #243447;
+                color: #ffffff;
                 font-size: 13px;
+                border-radius: 12px;
                 padding: 12px 16px;
             }
-            QPushButton:hover { background: #2459bd; }
-        """)
+            QPushButton:hover { background: #1b2838; }
+            """
+        )
         self.start_btn.clicked.connect(self.start_presence_camera)
 
         placeholder_layout.addStretch()
@@ -238,7 +241,7 @@ class PresenceInterface(QWidget):
         
         container = QWidget()
         container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(24, 24, 24, 24)
+        container_layout.setContentsMargins(4, 24, 24, 24)
         container_layout.setSpacing(16)
         
         running_label = QLabel("SCAN EN COURS...")

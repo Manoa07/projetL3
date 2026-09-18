@@ -14,7 +14,7 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QPixmap
 from pathlib import Path
 from components.icon_loader import load_icon
-from components.theme import NAV_BUTTON_STYLE
+from components.theme import NAV_BUTTON_STYLE, ACTION_BUTTON_STYLE
 from views.liveView import LiveView
 from views.elevesView import ElevesView
 # Stats removed from Surveillance interface (moved to Presence)
@@ -129,12 +129,25 @@ class SurveillanceInterface(QWidget):
     def setup_placeholder_page(self):
         self.live_placeholder = QWidget()
         placeholder_layout = QVBoxLayout(self.live_placeholder)
-        placeholder_layout.setContentsMargins(24, 24, 24, 24)
+        placeholder_layout.setContentsMargins(4, 24, 24, 24)
         placeholder_layout.setSpacing(16)
         self.start_btn = QPushButton("LANCER LA SURVEILLANCE")
         self.start_btn.setIcon(load_icon("play"))
         self.start_btn.setFixedSize(280, 60)
-        self.start_btn.setStyleSheet("background: #2f6fed; color: white; font-weight: 700; border-radius: 12px; padding: 12px 16px;")
+        self.start_btn.setStyleSheet(
+            ACTION_BUTTON_STYLE +
+            """
+            QPushButton {
+                background: #243447;
+                color: #ffffff;
+                font-weight: 700;
+                border-radius: 12px;
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover { background: #1b2838; }
+            """
+        )
         self.start_btn.clicked.connect(self.start_live_monitoring)
         placeholder_layout.addStretch()
         placeholder_layout.addWidget(self.start_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -154,7 +167,13 @@ class SurveillanceInterface(QWidget):
             self.stop_btn = QPushButton("ARRÊTER LA SURVEILLANCE")
             self.stop_btn.setIcon(load_icon("stop"))
             self.stop_btn.setFixedWidth(250)
-            self.stop_btn.setStyleSheet("background: #51606f; color: white; padding: 12px 16px; border-radius: 12px;")
+            self.stop_btn.setStyleSheet(
+                ACTION_BUTTON_STYLE +
+                """
+                QPushButton { background: #51606f; color: white; padding: 12px 16px; border-radius: 12px; }
+                QPushButton:hover { background: #3f5058; }
+                """
+            )
             self.stop_btn.clicked.connect(self.stop_live_monitoring)
             container_layout.addWidget(self.stop_btn, 0, alignment=Qt.AlignmentFlag.AlignCenter)
 

@@ -23,7 +23,7 @@ class AjoutExamenView(QWidget):
         scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(4, 24, 24, 24)
         layout.setSpacing(12)
         layout.addWidget(
             QLabel("<h2 style='color:#17212b;'>AJOUT EXAMEN</h2>"),

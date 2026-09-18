@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
+    QHeaderView,
 )
 import requests
 from config import API_BASE_URL, API_TIMEOUT
@@ -24,7 +25,7 @@ class GestionReferentielsView(QWidget):
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(4, 24, 24, 24)
         layout.setSpacing(14)
         layout.addWidget(QLabel("<h2 style='color:#17212b;'>GESTION DES DONNÉES</h2>"), alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -32,6 +33,13 @@ class GestionReferentielsView(QWidget):
         self.status.setStyleSheet("color:#8b93a7; font-style:italic;")
 
         tabs = QTabWidget()
+        # assurer un fond clair pour le panneau des onglets et des onglets lisibles
+        tabs.setStyleSheet("""
+            QTabWidget::pane { background: #ffffff; border: none; }
+            QTabBar::tab { background: transparent; color: #17212b; padding: 8px 12px; margin-right: 6px; border-radius: 6px; }
+            QTabBar::tab:selected { background: #e6ebf0; color: #17212b; }
+            QTabBar::tab:hover { background: #eef1f5; }
+        """)
         tabs.addTab(self.professeur_form(), "Professeur")
         tabs.addTab(self.nom_form("Salle", "Nom de la salle", "salle"), "Salle")
         tabs.addTab(self.nom_form("Matière", "Nom de la matière", "matiere"), "Matière")
@@ -50,6 +58,8 @@ class GestionReferentielsView(QWidget):
 
     def professeur_form(self):
         page = QWidget()
+        # forcer un fond clair pour la page de formulaire
+        page.setStyleSheet("background-color: #ffffff;")
         layout = QVBoxLayout(page)
         nom = self.input_field("Nom")
         prenom = self.input_field("Prénom")
@@ -61,7 +71,7 @@ class GestionReferentielsView(QWidget):
         button.setStyleSheet(
             """ 
               QPushButton { background: #243447; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
-              QPushButton:hover{ background-color: #052613;}
+                            QPushButton:hover{ background-color: #1b2838;}
             """
         )
         button.clicked.connect(lambda: self.save_professeur(nom, prenom, matricule))
@@ -71,6 +81,11 @@ class GestionReferentielsView(QWidget):
             ["ID", "Nom", "Prénom", "Matricule", "Actions"]
         )
         configure_table(self.professeur_table)
+        # make actions column wide enough
+        ph = self.professeur_table.horizontalHeader()
+        ph.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        ph.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        self.professeur_table.setColumnWidth(4, 300)
         layout.addWidget(self.professeur_table)
         self.load_professeurs()
         layout.addStretch()
@@ -78,6 +93,8 @@ class GestionReferentielsView(QWidget):
 
     def nom_form(self, title, placeholder, kind):
         page = QWidget()
+        # forcer un fond clair pour la page de formulaire
+        page.setStyleSheet("background-color: #ffffff;")
         layout = QVBoxLayout(page)
         name = self.input_field(placeholder)
         layout.addWidget(name)
@@ -86,7 +103,7 @@ class GestionReferentielsView(QWidget):
         button.setStyleSheet(
             """ 
               QPushButton { background: #243447; color: white; font-weight: 700; border-radius: 12px; padding: 6px 12px} 
-              QPushButton:hover{ background-color: #052613;}
+                            QPushButton:hover{ background-color: #1b2838;}
             """
         )
         button.clicked.connect(lambda: self.save_name(name, kind, title))
@@ -145,6 +162,20 @@ class GestionReferentielsView(QWidget):
                 delete_button = QPushButton("Supprimer")
                 update_button.setMinimumWidth(90)
                 delete_button.setMinimumWidth(90)
+                # ensure full labels are visible
+                update_button.setMinimumWidth(100)
+                delete_button.setMinimumWidth(100)
+                # small pill styles for action buttons
+                update_button.setStyleSheet(
+                    "QPushButton { background:#f6f8fb; color:#4b5563; border:1px solid #d8e0e8; "
+                    "border-radius:8px; padding:6px 10px; font-weight:700; }"
+                    "QPushButton:hover { background:#e9eef5; }"
+                )
+                delete_button.setStyleSheet(
+                    "QPushButton { background:#fff1ef; color:#b42318; border:1px solid #f3c7c2; "
+                    "border-radius:8px; padding:6px 10px; font-weight:700; }"
+                    "QPushButton:hover { background:#ffe1dd; }"
+                )
                 update_button.clicked.connect(
                     lambda checked=False, item=value, item_kind=kind:
                     self.update_referentiel(item_kind, item)

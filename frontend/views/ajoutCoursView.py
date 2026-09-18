@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QScrollArea,
+    QHeaderView,
 )
 import requests
 
@@ -65,7 +66,7 @@ class AjoutCoursView(QWidget):
         scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(4, 24, 24, 24)
         layout.setSpacing(12)
 
         title = QLabel("<h2 style='color:#17212b;'>AJOUT COURS</h2>")
@@ -139,6 +140,11 @@ class AjoutCoursView(QWidget):
             ["ID", "Nom", "Date", "Heure de début", "Heure de fin", "Salle", "Matière", "Actions"]
         )
         configure_table(self.cours_table)
+        # ensure actions column has enough width to show full buttons
+        ch = self.cours_table.horizontalHeader()
+        ch.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        ch.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
+        self.cours_table.setColumnWidth(7, 420)
         layout.addWidget(self.cours_table)
         layout.addStretch()
         page.setMinimumWidth(700)
@@ -222,6 +228,20 @@ class AjoutCoursView(QWidget):
                 delete_button.clicked.connect(
                     lambda checked=False, current=item: self.delete_cours(current)
                 )
+                # apply small pill styles to action buttons
+                update_button.setStyleSheet(
+                    "QPushButton { background:#f6f8fb; color:#4b5563; border:1px solid #d8e0e8; "
+                    "border-radius:8px; padding:6px 10px; font-weight:700; }"
+                    "QPushButton:hover { background:#e9eef5; }"
+                )
+                delete_button.setStyleSheet(
+                    "QPushButton { background:#fff1ef; color:#b42318; border:1px solid #f3c7c2; "
+                    "border-radius:8px; padding:6px 10px; font-weight:700; }"
+                    "QPushButton:hover { background:#ffe1dd; }"
+                )
+                # ensure full labels are visible
+                update_button.setMinimumWidth(80)
+                delete_button.setMinimumWidth(80)
                 actions_layout.addWidget(update_button)
                 actions_layout.addWidget(delete_button)
                 self.cours_table.setCellWidget(row, 7, actions)

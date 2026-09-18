@@ -55,16 +55,32 @@ class StatsView(QWidget):
         chart_label.setFixedHeight(180)
         presence_vbox.addWidget(chart_label)
 
-        # 2.a Résumé statistique pour cette section (total / présents / retards / taux)
+        # 2.a Résumé statistique pour cette section (valeurs stylées)
         stats_row = QHBoxLayout()
-        stats_row.setSpacing(18)
-        self.sec_total_label = QLabel("Total élèves: —")
-        self.sec_presents_label = QLabel("Présents: —")
-        self.sec_retards_label = QLabel("Retards: —")
-        self.sec_taux_label = QLabel("Taux: —%")
-        for lbl in (self.sec_total_label, self.sec_presents_label, self.sec_retards_label, self.sec_taux_label):
-            lbl.setStyleSheet("color: #243447; font-weight: 700;")
-            stats_row.addWidget(lbl)
+        stats_row.setSpacing(12)
+
+        def make_stat_widget(title, value="—"):
+            w = QLabel()
+            w.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            w.setFixedHeight(64)
+            w.setStyleSheet(
+                "background:#f6f8fb; border-radius:10px; padding:8px; color:#243447;"
+            )
+            w.setText(
+                f"<div style='font-weight:700;font-size:16px'>{value}</div>"
+                f"<div style='color:#7a7c8c;font-size:11px'>{title}</div>"
+            )
+            return w
+
+        self.stat_total = make_stat_widget("Total élèves")
+        self.stat_presents = make_stat_widget("Présents")
+        self.stat_retards = make_stat_widget("Retards")
+        self.stat_taux = make_stat_widget("Taux")
+
+        stats_row.addWidget(self.stat_total)
+        stats_row.addWidget(self.stat_presents)
+        stats_row.addWidget(self.stat_retards)
+        stats_row.addWidget(self.stat_taux)
         presence_vbox.addLayout(stats_row)
 
         # Table for listing students (ID hidden / Nom / Numéro / Statut) — styled like examen table
@@ -131,11 +147,11 @@ class StatsView(QWidget):
                 pix.loadFromData(buf.getvalue(), 'PNG')
                 chart_label.setPixmap(pix.scaled(chart_label.width(), chart_label.height()))
 
-            # Populate summary labels specific to this section
-            self.sec_total_label.setText(f"Total élèves: {total}")
-            self.sec_presents_label.setText(f"Présents: {presents}")
-            self.sec_retards_label.setText(f"Retards: {retards}")
-            self.sec_taux_label.setText(f"Taux: {taux}%")
+            # Update styled stat widgets
+            self.stat_total.setText(f"<div style='font-weight:700;font-size:16px'>{total}</div><div style='color:#7a7c8c;font-size:11px'>Total élèves</div>")
+            self.stat_presents.setText(f"<div style='font-weight:700;font-size:16px'>{presents}</div><div style='color:#7a7c8c;font-size:11px'>Présents</div>")
+            self.stat_retards.setText(f"<div style='font-weight:700;font-size:16px'>{retards}</div><div style='color:#7a7c8c;font-size:11px'>Retards</div>")
+            self.stat_taux.setText(f"<div style='font-weight:700;font-size:16px'>{taux}%</div><div style='color:#7a7c8c;font-size:11px'>Taux</div>")
 
             # Fetch retards list
             try:

@@ -55,10 +55,11 @@ class StatsView(QWidget):
         chart_label.setFixedHeight(180)
         presence_vbox.addWidget(chart_label)
 
-        # Table for listing students (Nom / Numero / Statut)
-        self.presence_table = QTableWidget(0, 3)
-        self.presence_table.setHorizontalHeaderLabels(["Nom", "Numéro", "Statut"])
-        configure_table(self.presence_table, height=260)
+        # Table for listing students (ID hidden / Nom / Numéro / Statut) — styled like examen table
+        self.presence_table = QTableWidget(0, 4)
+        self.presence_table.setHorizontalHeaderLabels(["ID", "Nom", "Numéro", "Statut"])
+        configure_table(self.presence_table)
+        self.presence_table.setColumnHidden(0, True)
         presence_vbox.addWidget(self.presence_table)
         
         # Will be replaced by real data fetched from backend
@@ -134,6 +135,7 @@ class StatsView(QWidget):
             for idx, s in enumerate(present_list):
                 key = student_key(s, idx)
                 students[key] = {
+                    'id': s.get('Id_eleve') or s.get('Numero_eleve') or '',
                     'nom': f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}",
                     'numero': s.get('Numero_eleve') or '',
                     'status': 'Présent'
@@ -143,6 +145,7 @@ class StatsView(QWidget):
                 key = student_key(s, idx)
                 # If already present as Présent, prefer Retard (overwrite), otherwise add
                 students[key] = {
+                    'id': s.get('Id_eleve') or s.get('Numero_eleve') or '',
                     'nom': f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}",
                     'numero': s.get('Numero_eleve') or '',
                     'status': 'Retard'
@@ -152,9 +155,11 @@ class StatsView(QWidget):
             self.presence_table.setRowCount(0)
             for row_idx, info in enumerate(students.values()):
                 self.presence_table.insertRow(row_idx)
-                self.presence_table.setItem(row_idx, 0, QTableWidgetItem(info['nom']))
-                self.presence_table.setItem(row_idx, 1, QTableWidgetItem(str(info['numero'])))
-                self.presence_table.setItem(row_idx, 2, QTableWidgetItem(info['status']))
+                # ID (may be empty)
+                self.presence_table.setItem(row_idx, 0, QTableWidgetItem(str(info.get('id') or '')))
+                self.presence_table.setItem(row_idx, 1, QTableWidgetItem(info['nom']))
+                self.presence_table.setItem(row_idx, 2, QTableWidgetItem(str(info['numero'])))
+                self.presence_table.setItem(row_idx, 3, QTableWidgetItem(info['status']))
         except requests.RequestException:
             # Fall back to sample data on error
             sections = [

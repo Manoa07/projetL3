@@ -131,4 +131,50 @@ class StatsView(QWidget):
         info_row.addStretch()
         layout.addLayout(info_row)
 
+        # 4. Liste des élèves présents (Nom / Numero / Status)
+        present_table = QTableWidget(0, 3)
+        present_table.setHorizontalHeaderLabels(["Nom", "Numero", "Status"])
+        # use same styling as examen tables
+        configure_table(present_table, height=260)
+
+        # Fetch present + retard students and merge
+        students_map = {}
+        try:
+            resp_p = requests.get(f"{API_BASE_URL}/stats/presence/presents", timeout=API_TIMEOUT)
+            resp_r = requests.get(f"{API_BASE_URL}/stats/presence/retards", timeout=API_TIMEOUT)
+            resp_p.raise_for_status(); resp_r.raise_for_status()
+            presents = resp_p.json() or []
+            retards = resp_r.json() or []
+            # add presents
+            for s in presents:
+                key = s.get('Id_eleve') or s.get('Numero_eleve') or f"{s.get('Nom_eleve','')}_{s.get('Prenom_eleve','')}"
+                students_map[key] = {
+                    'nom': f"{s.get('Nom_eleve','')} {s.get('Prenom_eleve','')}",
+                    'numero': s.get('Numero_eleve',''),
+                    'status': 'Présent'
+                }
+            # add retards if not already present
+            for s in retards:
+                key = s.get('Id_eleve') or s.get('Numero_eleve') or f"{s.get('Nom_eleve','')}_{s.get('Prenom_eleve','')}"
+                if key in students_map:
+                    # if already present, keep Présent (present wins)
+                    continue
+                students_map[key] = {
+                    'nom': f"{s.get('Nom_eleve','')} {s.get('Prenom_eleve','')}",
+                    'numero': s.get('Numero_eleve',''),
+                    'status': 'Retardataire'
+                }
+        except requests.RequestException:
+            students_map = {}
+
+        # populate table
+        for row, (_, s) in enumerate(students_map.items()):
+            present_table.insertRow(row)
+            present_table.setItem(row, 0, QTableWidgetItem(str(s['nom'])))
+            present_table.setItem(row, 1, QTableWidgetItem(str(s['numero'])))
+            present_table.setItem(row, 2, QTableWidgetItem(str(s['status'])))
+
+        layout.addWidget(QLabel("Élèves présents"))
+        layout.addWidget(present_table)
+
         layout.addStretch()

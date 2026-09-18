@@ -50,18 +50,6 @@ class StatsView(QWidget):
         section_title = QLabel("Présences par section")
         section_title.setStyleSheet("color: #17212b; font-weight: 700;")
         presence_vbox.addWidget(section_title)
-        # 2.a Résumé statistique pour cette section (total / présents / retards / taux)
-        stats_row = QHBoxLayout()
-        stats_row.setSpacing(18)
-        self.sec_total_label = QLabel("Total élèves: —")
-        self.sec_presents_label = QLabel("Présents: —")
-        self.sec_retards_label = QLabel("Retards: —")
-        self.sec_taux_label = QLabel("Taux: —%")
-        for lbl in (self.sec_total_label, self.sec_presents_label, self.sec_retards_label, self.sec_taux_label):
-            lbl.setStyleSheet("color: #243447; font-weight: 700;")
-            stats_row.addWidget(lbl)
-        presence_vbox.addLayout(stats_row)
-
         # Chart label will display the presence/retards timeseries
         chart_label = QLabel()
         chart_label.setFixedHeight(180)
@@ -128,11 +116,7 @@ class StatsView(QWidget):
                 pix.loadFromData(buf.getvalue(), 'PNG')
                 chart_label.setPixmap(pix.scaled(chart_label.width(), chart_label.height()))
 
-            # Populate section summary labels
-            self.sec_total_label.setText(f"Total élèves: {total}")
-            self.sec_presents_label.setText(f"Présents: {presents}")
-            self.sec_retards_label.setText(f"Retards: {retards}")
-            self.sec_taux_label.setText(f"Taux: {taux}%")
+            # (Summary KPIs are shown above in the KPI cards; the detailed section displays chart + table)
 
             # Fetch retards list
             try:

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar, QGridLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar, QGridLayout, QTableWidget, QTableWidgetItem
 from PyQt6.QtCore import Qt
 from components.icon_loader import load_icon
 from components.statCard import StatCard
@@ -9,6 +9,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 from PyQt6.QtGui import QPixmap
+from components.theme import configure_table
 
 class StatsView(QWidget):
     def __init__(self):
@@ -49,10 +50,28 @@ class StatsView(QWidget):
         section_title = QLabel("Présences par section")
         section_title.setStyleSheet("color: #17212b; font-weight: 700;")
         presence_vbox.addWidget(section_title)
-        # Chart label will display the presence/retards timeseries above lists
+        # 2.a Résumé statistique pour cette section (total / présents / retards / taux)
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(18)
+        self.sec_total_label = QLabel("Total élèves: —")
+        self.sec_presents_label = QLabel("Présents: —")
+        self.sec_retards_label = QLabel("Retards: —")
+        self.sec_taux_label = QLabel("Taux: —%")
+        for lbl in (self.sec_total_label, self.sec_presents_label, self.sec_retards_label, self.sec_taux_label):
+            lbl.setStyleSheet("color: #243447; font-weight: 700;")
+            stats_row.addWidget(lbl)
+        presence_vbox.addLayout(stats_row)
+
+        # Chart label will display the presence/retards timeseries
         chart_label = QLabel()
         chart_label.setFixedHeight(180)
         presence_vbox.addWidget(chart_label)
+
+        # Table for listing students (Nom / Numero / Statut)
+        self.presence_table = QTableWidget(0, 3)
+        self.presence_table.setHorizontalHeaderLabels(["Nom", "Numéro", "Statut"])
+        configure_table(self.presence_table, height=260)
+        presence_vbox.addWidget(self.presence_table)
         
         # Will be replaced by real data fetched from backend
         sections = []
@@ -109,8 +128,11 @@ class StatsView(QWidget):
                 pix.loadFromData(buf.getvalue(), 'PNG')
                 chart_label.setPixmap(pix.scaled(chart_label.width(), chart_label.height()))
 
-            # Display present students as a simple comma-separated line
-            names = ", ".join([f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}" for s in present_list])
+            # Populate section summary labels
+            self.sec_total_label.setText(f"Total élèves: {total}")
+            self.sec_presents_label.setText(f"Présents: {presents}")
+            self.sec_retards_label.setText(f"Retards: {retards}")
+            self.sec_taux_label.setText(f"Taux: {taux}%")
 
             # Fetch retards list
             try:
@@ -120,25 +142,28 @@ class StatsView(QWidget):
             except requests.RequestException:
                 retards_list = []
 
-            names_retards = ", ".join([f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}" for s in retards_list])
+            # Build a combined students dict keyed by Id_eleve
+            students = {}
+            for s in present_list:
+                students[s.get('Id_eleve')] = {
+                    'nom': f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}",
+                    'numero': s.get('Numero_eleve') or '',
+                    'status': 'Présent'
+                }
+            for s in retards_list:
+                students[s.get('Id_eleve')] = {
+                    'nom': f"{s.get('Prenom_eleve','')} {s.get('Nom_eleve','')}",
+                    'numero': s.get('Numero_eleve') or '',
+                    'status': 'Retard'
+                }
 
-            # Lists area: presents on left, retards on right
-            lists_row = QHBoxLayout()
-            presents_col = QVBoxLayout()
-            presents_col.addWidget(QLabel("<b>Présents</b>"))
-            presents_text = QLabel(names if names else '—')
-            presents_text.setWordWrap(True)
-            presents_col.addWidget(presents_text)
-
-            retards_col = QVBoxLayout()
-            retards_col.addWidget(QLabel("<b>Retards</b>"))
-            retards_text = QLabel(names_retards if names_retards else '—')
-            retards_text.setWordWrap(True)
-            retards_col.addWidget(retards_text)
-
-            lists_row.addLayout(presents_col)
-            lists_row.addLayout(retards_col)
-            presence_vbox.addLayout(lists_row)
+            # Populate table
+            self.presence_table.setRowCount(0)
+            for row_idx, (id_e, info) in enumerate(students.items()):
+                self.presence_table.insertRow(row_idx)
+                self.presence_table.setItem(row_idx, 0, QTableWidgetItem(info['nom']))
+                self.presence_table.setItem(row_idx, 1, QTableWidgetItem(str(info['numero'])))
+                self.presence_table.setItem(row_idx, 2, QTableWidgetItem(info['status']))
         except requests.RequestException:
             # Fall back to sample data on error
             sections = [

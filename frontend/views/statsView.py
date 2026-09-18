@@ -82,12 +82,12 @@ class StatsView(QWidget):
             frac = max(0.0, min(frac, 1.0))
             sizes = [frac, 1 - frac]
             colors = [color, '#e9eef3']
-            # remove white seam by disabling edge lines and hiding axes
+            # eliminate seam: no edge lines, disable antialiasing on wedges
             wedges, _ = ax.pie(
                 sizes,
                 colors=colors,
                 startangle=90,
-                wedgeprops=dict(width=0.32, linewidth=0)
+                wedgeprops=dict(width=0.32, linewidth=0, edgecolor=color, antialiased=False)
             )
             ax.set(aspect="equal")
             ax.axis('off')
@@ -117,7 +117,9 @@ class StatsView(QWidget):
             t.setStyleSheet('font-weight:700; font-size:12px; color:#17212b;')
             t.setAlignment(Qt.AlignmentFlag.AlignHCenter)
             img = QLabel()
-            img.setPixmap(make_donut(value, denom, color, center_text=center))
+            pix = make_donut(value, denom, color, center_text=center, size=(140, 140))
+            img.setFixedSize(140, 140)
+            img.setPixmap(pix.scaled(140, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
             img.setAlignment(Qt.AlignmentFlag.AlignCenter)
             block.addWidget(t)
             block.addWidget(img)

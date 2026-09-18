@@ -65,77 +65,57 @@ class StatsView(QWidget):
         chart_title.setStyleSheet("font-weight:700; font-size:13px;")
         presence_vbox.addWidget(chart_title)
 
-        chart_label = QLabel()
-        chart_label.setFixedHeight(220)
-        chart_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        presence_vbox.addWidget(chart_label)
-
-        # Fetch timeseries and render chart
+        # --- Small circular (donut) charts for Présents / Retards / Taux ---
         try:
-            resp = requests.get(f"{API_BASE_URL}/stats/presence/timeseries?days=14", timeout=API_TIMEOUT)
-            resp.raise_for_status()
-            timeseries = resp.json()
-        except requests.RequestException:
-            timeseries = []
+            stats  # check existence
+        except NameError:
+            stats = {}
 
-        if timeseries:
-            # Extract series
-            dates = [t.get('date') for t in timeseries]
-            presents = np.array([int(t.get('presents', 0)) for t in timeseries], dtype=float)
-            retards = np.array([int(t.get('retards', 0)) for t in timeseries], dtype=float)
-            taux = None
-            if all('taux_presence' in t for t in timeseries):
-                taux = np.array([float(t.get('taux_presence', 0.0)) for t in timeseries], dtype=float)
+        total = stats.get('total_eleves', 0)
+        presents_val = stats.get('presents', 0)
+        retards_val = stats.get('retards', 0)
+        taux_val = stats.get('taux_presence', 0.0)
 
-            # Light smoothing (moving average)
-            def smooth(a, w=3):
-                if a.size < 3:
-                    return a
-                kernel = np.ones(w) / w
-                return np.convolve(a, kernel, mode='same')
-
-            presents_s = smooth(presents, w=3)
-            retards_s = smooth(retards, w=3)
-
-            plt.style.use('seaborn-v0_8')
-            fig = plt.figure(figsize=(8, 2.4), dpi=100)
-            ax = fig.add_subplot(111)
-            color_p = '#27ae60'
-            color_r = '#e67e22'
-            color_t = '#2980b9'
-
-            ax.plot(dates, presents_s, color=color_p, linewidth=2.6, marker='o', label='Présents')
-            ax.fill_between(dates, presents_s, color=color_p, alpha=0.12)
-            ax.plot(dates, retards_s, color=color_r, linewidth=2.2, marker='o', label='Retards')
-
-            if taux is not None:
-                taux_s = smooth(taux, w=3)
-                ax2 = ax.twinx()
-                ax2.plot(dates, taux_s, color=color_t, linewidth=2, linestyle='--', marker='s', label='Taux (%)')
-                ax2.set_ylabel('Taux (%)', color=color_t)
-                ax2.tick_params(axis='y', colors=color_t)
-
-            ax.set_ylim(bottom=0)
-            ax.set_xlabel('Date')
-            ax.set_ylabel('Nombre')
-            ax.grid(axis='y', alpha=0.25)
-            ax.tick_params(axis='x', rotation=40)
-            ax.legend(loc='upper left')
-            plt.tight_layout()
-
+        def make_donut(value, total_for_pct, color, center_text=None, size=(140, 140)):
+            fig, ax = plt.subplots(figsize=(size[0]/100, size[1]/100), dpi=100)
+            frac = float(value) / float(total_for_pct) if total_for_pct else 0.0
+            frac = max(0.0, min(frac, 1.0))
+            sizes = [frac, 1 - frac]
+            colors = [color, '#e9eef3']
+            wedges, _ = ax.pie(sizes, colors=colors, startangle=90, wedgeprops=dict(width=0.32, edgecolor='white'))
+            ax.set(aspect="equal")
+            plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+            # center text
+            if center_text is None:
+                center_text = f"{int(value)}"
+            ax.text(0, 0, center_text, ha='center', va='center', fontsize=10, color='#17212b', weight='700')
             buf = io.BytesIO()
-            fig.savefig(buf, format='png', bbox_inches='tight', dpi=100)
+            fig.savefig(buf, format='png', transparent=True)
             plt.close(fig)
             buf.seek(0)
             pix = QPixmap()
             pix.loadFromData(buf.getvalue(), 'PNG')
-            w = chart_label.width() or 800
-            h = chart_label.height() or 220
-            chart_label.setPixmap(pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        else:
-            no_data = QLabel("Aucune donnée disponible")
-            no_data.setStyleSheet("color:#7a7c8c;font-size:12px;")
-            presence_vbox.addWidget(no_data)
+            return pix
+
+        donut_layout = QHBoxLayout()
+        donut_layout.setSpacing(18)
+        # create vertical blocks (title + donut)
+        for title_text, value, denom, color, center in [
+            ("Présents", presents_val, total, '#27ae60', f"{presents_val}"),
+            ("Retards", retards_val, total, '#e67e22', f"{retards_val}"),
+            ("Taux (%)", taux_val, 100.0, '#2980b9', f"{taux_val}%"),
+        ]:
+            block = QVBoxLayout()
+            t = QLabel(title_text)
+            t.setStyleSheet('font-weight:700; font-size:12px; color:#17212b;')
+            t.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+            img = QLabel()
+            img.setPixmap(make_donut(value, denom, color, center_text=center))
+            img.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            block.addWidget(t)
+            block.addWidget(img)
+            donut_layout.addLayout(block)
+        presence_vbox.addLayout(donut_layout)
 
         layout.addWidget(presence_frame)
 

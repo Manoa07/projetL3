@@ -272,47 +272,26 @@ def update_eleve(db, eleve_id, data):
 
 def delete_eleve(db, eleve_id):
     eleve = get_eleve_by_id(db, eleve_id)
-    has_presence = db.query(Presence.id_presence).filter(
-        Presence.id_eleve == eleve_id
-    ).first()
-    has_presence_cours = db.query(
-        PresenceCours.id_presence_cours
-    ).filter(
-        PresenceCours.id_eleve_eleve == eleve_id
-    ).first()
-    has_presence_examen = db.query(
-        PresenceExamen.id_presence_examen
-    ).filter(
-        PresenceExamen.id_eleve_eleve == eleve_id
-    ).first()
-    has_surveillance = db.query(
-        Surveillance.Id_surveillance
-    ).filter(
-        Surveillance.id_eleve == eleve_id
-    ).first()
-    has_detection = db.query(
-        Detection.id_detection
-    ).filter(
-        Detection.id_eleve_eleve == eleve_id
-    ).first()
-
-    if any((
-        has_presence,
-        has_presence_cours,
-        has_presence_examen,
-        has_surveillance,
-        has_detection,
-    )):
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Cet élève possède des présences, surveillances ou "
-                "détections associées. La suppression physique est interdite "
-                "pour préserver l'historique."
-            ),
-        )
 
     try:
+        # Suppression explicite des enregistrements dépendants pour éviter les
+        # violations de contraintes lorsque l'élève est supprimé.
+        db.query(Presence).filter(Presence.id_eleve == eleve_id).delete(
+            synchronize_session=False
+        )
+        db.query(PresenceCours).filter(PresenceCours.id_eleve_eleve == eleve_id).delete(
+            synchronize_session=False
+        )
+        db.query(PresenceExamen).filter(PresenceExamen.id_eleve_eleve == eleve_id).delete(
+            synchronize_session=False
+        )
+        db.query(Surveillance).filter(Surveillance.id_eleve == eleve_id).delete(
+            synchronize_session=False
+        )
+        db.query(Detection).filter(Detection.id_eleve_eleve == eleve_id).delete(
+            synchronize_session=False
+        )
+
         db.delete(eleve)
         db.commit()
     except IntegrityError as error:
@@ -324,8 +303,8 @@ def delete_eleve(db, eleve_id):
         raise HTTPException(
             status_code=409,
             detail=(
-                "Cet élève possède des données associées. "
-                "La suppression physique est interdite."
+                "Cet élève possède des données associées et la suppression a "
+                "échoué à cause d'une contrainte de base de données."
             ),
         ) from error
     except Exception as error:

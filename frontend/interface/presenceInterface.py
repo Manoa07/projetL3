@@ -32,6 +32,7 @@ class PresenceInterface(QWidget):
         self.back_to_home = back_to_home_callback
         self.camera_active = False
         self.video_thread = None # Stockage de l'instance du thread
+        self._presence_blocked = False
         global_signals.data_changed.connect(self.load_cours)
         
         layout = QHBoxLayout(self)
@@ -255,6 +256,7 @@ class PresenceInterface(QWidget):
 
     def start_presence_camera(self):
         #selection cours
+        self._presence_blocked = False
         self.selected_cours_id = self.cours_select.currentData()
         if not self.selected_cours_id:
             print("Aucun cours sélectionné")
@@ -286,7 +288,8 @@ class PresenceInterface(QWidget):
         self.video_thread.student_detected_signal.connect(
             self.update_presence_label
         )
-        self.video_thread.start()        
+        self.video_thread.error_signal.connect(self.handle_presence_error)
+        self.video_thread.start()
         # Bouton d'arrêt
         self.stop_btn = QPushButton("ARRÊTER LE SCAN")
         self.stop_btn.setIcon(load_icon("stop"))
@@ -307,6 +310,43 @@ class PresenceInterface(QWidget):
         """Met à jour l'en-tête de CameraView avec le nom détecté"""
         if hasattr(self, 'camera_view'):
             self.camera_view.presence.setText(f"DERNIER: {student_name}")
+
+    def handle_presence_error(self, message):
+        """Affiche une alerte claire lorsqu’un cours est terminé ou qu’une erreur de présence survient."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        if self._presence_blocked:
+            return
+
+        self._presence_blocked = True
+        lower_message = (message or "").lower()
+        if "cours" in lower_message and ("termin" in lower_message or "fini" in lower_message):
+            QMessageBox.warning(
+                self,
+                "Présence impossible",
+                "Ce cours est déjà terminé. L’accès à la présence est bloqué pour éviter les erreurs de comptage.",
+            )
+        else:
+            QMessageBox.warning(
+                self,
+                "Présence impossible",
+                str(message) or "Une erreur est survenue pendant l’enregistrement de la présence.",
+            )
+
+        if self.camera_active and self.video_thread is not None:
+            self.video_thread.stop()
+            self.video_thread = None
+            self.camera_active = False
+
+            if hasattr(self, "cam_scroll"):
+                try:
+                    self.stack.removeWidget(self.cam_scroll)
+                    self.cam_scroll.deleteLater()
+                except Exception:
+                    pass
+
+            self.setup_placeholder_page()
+            self.stack.setCurrentIndex(0)
 
     def stop_presence_camera(self):
         """Arrête proprement le thread et revient au bouton de départ"""

@@ -5,6 +5,7 @@ import time
 import json
 import sys
 import tempfile
+import urllib.request
 import requests
 import logging
 from config import API_BASE_URL, API_TIMEOUT
@@ -12,6 +13,29 @@ from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python.vision import PoseLandmarker
 from mediapipe.tasks.python.vision import PoseLandmarkerOptions
 from mediapipe.tasks.python.vision import RunningMode
+
+POSE_MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+    "pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
+)
+
+
+def ensure_pose_model(model_path: str) -> str:
+    """Télécharge le modèle MediaPipe si absent pour que la surveillance de posture continue."""
+    if os.path.exists(model_path):
+        return model_path
+
+    os.makedirs(os.path.dirname(model_path) or ".", exist_ok=True)
+    print(f"[posture_detection] Modèle pose absent, téléchargement en cours : {model_path}")
+    try:
+        urllib.request.urlretrieve(POSE_MODEL_URL, model_path)
+        print(f"[posture_detection] Modèle pose téléchargé : {model_path}")
+        return model_path
+    except Exception as exc:
+        raise FileNotFoundError(
+            f"Modèle MediaPipe introuvable et impossible à télécharger : {model_path}. "
+            f"Erreur: {exc}"
+        ) from exc
 try:
     from .mouvement import detect_suspicious_movements, detect_whispering
 except Exception:
@@ -20,6 +44,7 @@ except Exception:
 # Chemin vers le modèle
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(current_dir, "../models/pose_landmarker.task")
+model_path = ensure_pose_model(model_path)
 _DEBUG_LOG_PATH = os.path.abspath(os.path.join(current_dir, "..", "debug-1f4ecf.log"))
 _DEBUG_LOG_PATH_FALLBACK = os.path.join(tempfile.gettempdir(), "debug-1f4ecf.log")
 

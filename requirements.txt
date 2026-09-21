@@ -4,33 +4,35 @@
 # Installation:
 #   pip install -r requirements.txt
 #
-# Ce fichier regroupe l'ensemble des dépendances nécessaires au backend
-# (FastAPI) et au frontend (PyQt6).
+# Ce fichier regroupe les dépendances du backend et du frontend.
+# Les versions ci-dessous sont compatibles avec Python 3.12 et 3.13 sur Windows.
 # =============================================================================
 
 # ---- Backend : API FastAPI --------------------------------------------------
-fastapi
-uvicorn
-sqlalchemy
-psycopg2-binary
-pydantic
-python-multipart
-python-dotenv
+fastapi==0.111.1
+uvicorn[standard]==0.30.1
+sqlalchemy==2.0.32
+psycopg2-binary==2.9.9
+pydantic==2.8.2
+python-multipart==0.0.20
+python-dotenv==1.0.1
+httpx==0.27.0
 
 # ---- Backend & Frontend : vision par ordinateur -----------------------------
-opencv-python
-numpy
-mtcnn
-keras-facenet
-# TensorFlow is required by mtcnn and keras-facenet for face embeddings.
-tensorflow>=2.21; python_version < "3.14"
-scikit-learn
-joblib
+opencv-python==4.10.0.84
+numpy>=2.1.3,<3.0
+scipy>=1.15.0,<2.0
+mtcnn==0.1.1
+keras-facenet==0.3.2
+# TensorFlow 2.17 pour Python 3.12, 2.18 pour Python 3.13.
+tensorflow==2.17.0 ; python_version < "3.13"
+tensorflow==2.20.0 ; python_version >= "3.13"
+scikit-learn>=1.5,<2
+joblib==1.4.2
 
 # ---- Frontend : interface graphique PyQt6 -------------------------------------
-PyQt6
-qasync
-requests
-httpx
-mediapipe
+PyQt6==6.7.1
+qasync==0.28.0
+requests==2.32.3
+mediapipe==0.10.35
 ultralytics>=8.3.0,<9

@@ -6,36 +6,130 @@ Projet composé de deux parties:
 
 ## Prérequis
 
-- Python 3.11 ou 3.12
+- Python 3.12 recommandé comme version stable du projet
+- Python 3.13 compatible seulement si les outils de compilation Microsoft C++ Build Tools sont installés
 - PostgreSQL installé et démarré localement
+- Un environnement virtuel Python dédié au projet
 - Les dépendances Python du backend et du frontend
 
 Le projet fonctionne sans Docker. PostgreSQL est le seul service externe requis.
 
-La surveillance vidéo utilise également les modèles locaux suivants:
+### Modèles locaux requis
+
+La surveillance vidéo utilise également les fichiers binaires suivants, qui ne sont pas versionnés par Git :
 - `frontend/models/pose_landmarker.task`: extraction des points du corps avec MediaPipe.
 - `models/posture_classifier.pkl`: classification des postures suspectes.
 - `frontend/models/weights/yolov8n.pt`: détection des objets interdits avec YOLO.
 
-Les fichiers binaires de modèles sont ignorés par Git. Ils doivent donc être
-présents localement avant de lancer la surveillance.
+Ces fichiers sont ignorés par `.gitignore` et doivent être présents localement avant de lancer la surveillance.
 
 ## Installation
 
-### Installation
-
-Depuis la racine du projet, crée un environnement virtuel puis installe les deux
-groupes de dépendances:
+### 1) Créer l’environnement virtuel
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
+```
+
+### 2) Installer les dépendances
+
+Option recommandée pour le projet complet :
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Ou installation séparée si besoin :
+
+```powershell
 python -m pip install -r requirements-backend.txt
 python -m pip install -r requirements-frontend.txt
 ```
 
+> Important : les dépendances ont été vérifiées avant le push Git. La version stable recommandée pour ce projet reste Python 3.12. Sous Python 3.13, le paquet psycopg2-binary peut nécessiter l’installation des Microsoft C++ Build Tools pour compiler localement.
+
+### 3) Configurer l’environnement local
+
 Copie `.env.example` vers `.env`, puis adapte les identifiants PostgreSQL.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+## Checklist avant push Git
+
+Avant de faire un push sur Git, vérifie impérativement :
+
+```powershell
+git status --short
+```
+
+Vérifications à faire :
+- `.env` n’est pas suivi ni envoyé
+- les modèles binaires `.task`, `.pkl`, `.pt` ne sont pas ajoutés
+- les fichiers de logs ne sont pas envoyés
+- la version de Python utilisée est bien compatible avec les requirements
+- les dépendances installées correspondent aux versions listées dans les fichiers de requirements
+
+> En particulier, la version `numpy` a été alignée sur une variante compatible avec Python 3.13 pour éviter les échecs de build sur Windows.
+
+Exemple de fichiers ignorés attendus :
+- `.env`
+- `*.task`
+- `*.pkl`
+- `*.pt`
+- `*.log`
+
+## Détection des postures et des gestes
+
+La surveillance combine deux traitements sur chaque caméra :
+1. YOLO détecte les objets interdits et ajoute les alertes correspondantes.
+2. MediaPipe PoseLandmarker extrait les points du corps, puis le classifieur
+   local reconnaît les postures suspectes entraînées dans `frontend/posture_detection/dataset_postures`.
+
+Une posture est confirmée par un vote sur plusieurs images consécutives afin
+de limiter les faux positifs. Le modèle de posture peut être régénéré depuis
+le dataset existant :
+
+```powershell
+.venv\Scripts\python.exe frontend\posture_detection\train_model.py
+```
+
+### Détection YOLOv8
+
+La surveillance en direct utilise automatiquement `frontend/models/weights/yolov8n.pt` lorsque
+Ultralytics est installé. L’analyse de posture MediaPipe reste active et reçoit
+la frame originale; les annotations YOLO sont ajoutées uniquement à l’image
+affichée.
+
+Pour choisir un autre modèle ou un autre appareil :
+
+```powershell
+$env:YOLO_MODEL_PATH = "frontend/models/weights/yolov8m.pt"
+$env:YOLO_DEVICE = "cpu"
+$env:YOLO_CONFIDENCE = "0.25"
+$env:EXAM_ID = "1"
+$env:YOLO_FORBIDDEN_OBJECTS = "cell phone,laptop,tablet,book,backpack,bottle"
+$env:SURVEILLANCE_API_URL = "http://127.0.0.1:8000/surveillance/object-alert"
+cd frontend
+python main.py
+```
+
+`EXAM_ID` doit correspondre à un examen existant dans le backend. Lorsqu'un objet
+interdit est détecté, l'alerte est affichée dans le fil live et enregistrée via
+`POST /surveillance/object-alert` avec son niveau de confiance.
+
+Si le modèle, Ultralytics ou sa configuration sont indisponibles, la surveillance
+continue avec le pipeline MediaPipe existant.
+
+## Remarques de cohérence
+
+- Les scripts `scripts/run-backend.ps1` et `scripts/run-frontend.ps1` configurent
+  automatiquement les répertoires de lancement.
+- `frontend/services/presenceTheard.py` conserve l'ancien nom pour compatibilité, mais expose maintenant `PresenceThread`.
+- Les schémas Pydantic ont été normalisés sur `from_attributes=True`.
 
 ### Base de données
 

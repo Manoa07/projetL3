@@ -1,5 +1,6 @@
 import os
 import time
+import urllib.request
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -9,6 +10,29 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
 
 from services.yolo_detector import YoloDetector
+
+POSE_MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+    "pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
+)
+
+
+def ensure_pose_model(model_path: Path) -> Path:
+    """Télécharge le modèle MediaPipe si absent pour ne pas désactiver la posture."""
+    if model_path.exists():
+        return model_path
+
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"[VideoThread] Modèle pose absent, téléchargement en cours : {model_path}")
+    try:
+        urllib.request.urlretrieve(POSE_MODEL_URL, str(model_path))
+        print(f"[VideoThread] Modèle pose téléchargé : {model_path}")
+        return model_path
+    except Exception as exc:
+        raise FileNotFoundError(
+            f"Modèle pose introuvable et impossible à télécharger ({model_path}). "
+            f"Vérifiez la connexion Internet ou placez le fichier manuellement. Erreur: {exc}"
+        ) from exc
 
 
 class VideoThread(QThread):
@@ -51,8 +75,10 @@ class VideoThread(QThread):
 
     def _create_pose_detector(self):
         model_path = Path(__file__).resolve().parents[1] / "models" / "pose_landmarker.task"
-        if not model_path.exists():
-            print(f"[VideoThread] Modèle gestes absent : {model_path}")
+        try:
+            model_path = ensure_pose_model(model_path)
+        except FileNotFoundError as error:
+            print(f"[VideoThread] {error}")
             return None
 
         try:

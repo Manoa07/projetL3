@@ -145,7 +145,15 @@ class AjoutCoursView(QWidget):
         ch.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         ch.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
         self.cours_table.setColumnWidth(7, 420)
+
+        self.summary_label = QLabel("Résumé des cours : attente d'un rafraîchissement...")
+        self.summary_label.setStyleSheet(
+            "color:#243447; background:#f5f7fb; padding:10px 12px; "
+            "border:1px solid #dfe5eb; border-radius:10px; font-weight:600;"
+        )
+        self.summary_label.setWordWrap(True)
         layout.addWidget(self.cours_table)
+        layout.addWidget(self.summary_label)
         layout.addStretch()
         page.setMinimumWidth(700)
         scroll.setWidget(page)
@@ -197,8 +205,10 @@ class AjoutCoursView(QWidget):
                 timeout=API_TIMEOUT,
             )
             response.raise_for_status()
+            courses = response.json()
             self.cours_table.setRowCount(0)
-            for row, item in enumerate(response.json()):
+            summaries = []
+            for row, item in enumerate(courses):
                 self.cours_table.insertRow(row)
                 values = (
                     item.get("Id_cours", item.get("id_cours", "")),
@@ -217,6 +227,25 @@ class AjoutCoursView(QWidget):
                     self.cours_table.setItem(
                         row, column, QTableWidgetItem(str(value))
                     )
+
+                cours_id = item.get("Id_cours", item.get("id_cours"))
+                if cours_id is not None:
+                    try:
+                        summary_response = requests.get(
+                            f"{API_BASE_URL}/cours/{cours_id}/presence-summary",
+                            timeout=API_TIMEOUT,
+                        )
+                        if summary_response.status_code == 200:
+                            summary = summary_response.json()
+                            summaries.append(
+                                f"{item.get('nom_cours', item.get('Nom_cours', 'Cours'))} : "
+                                f"{summary.get('present', 0)} présents / "
+                                f"{summary.get('absent', 0)} absents / "
+                                f"{summary.get('retard', 0)} retard(s)"
+                            )
+                    except requests.RequestException:
+                        pass
+
                 actions = QWidget()
                 actions_layout = QHBoxLayout(actions)
                 actions_layout.setContentsMargins(2, 2, 2, 2)
@@ -228,7 +257,6 @@ class AjoutCoursView(QWidget):
                 delete_button.clicked.connect(
                     lambda checked=False, current=item: self.delete_cours(current)
                 )
-                # apply small pill styles to action buttons
                 update_button.setStyleSheet(
                     "QPushButton { background:#f6f8fb; color:#4b5563; border:1px solid #d8e0e8; "
                     "border-radius:8px; padding:6px 10px; font-weight:700; }"
@@ -239,12 +267,16 @@ class AjoutCoursView(QWidget):
                     "border-radius:8px; padding:6px 10px; font-weight:700; }"
                     "QPushButton:hover { background:#ffe1dd; }"
                 )
-                # ensure full labels are visible
                 update_button.setMinimumWidth(80)
                 delete_button.setMinimumWidth(80)
                 actions_layout.addWidget(update_button)
                 actions_layout.addWidget(delete_button)
                 self.cours_table.setCellWidget(row, 7, actions)
+
+            if summaries:
+                self.summary_label.setText("Résumé des cours :<br>" + "<br>".join(summaries))
+            else:
+                self.summary_label.setText("Résumé des cours : aucun cours enregistré.")
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
             self.status.setText("Impossible de charger les cours.")
             self.status.setStyleSheet("color: #f39c12;")

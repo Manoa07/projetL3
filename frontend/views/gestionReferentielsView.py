@@ -19,6 +19,16 @@ from services.events import global_signals
 from components.theme import configure_table
 
 
+def safe_int(value, default=0):
+    """Convertit une valeur en int sans faire planter l’interface."""
+    try:
+        if value in (None, ""):
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 class GestionReferentielsView(QWidget):
     """Création des données utilisées par les cours et les examens."""
 
@@ -195,39 +205,53 @@ class GestionReferentielsView(QWidget):
             self.status.setStyleSheet("color: #f39c12;")
 
     def update_referentiel(self, kind, item):
-        endpoint = {
-            "professeur": f"professeur/{item['id_professeur']}",
-            "salle": f"salle/{item['id_salle']}",
-            "matiere": f"matiere/{item['id_matiere']}",
-        }[kind]
-        if kind == "professeur":
-            nom, ok_nom = QInputDialog.getText(self, "Modifier", "Nom :", text=item["nom_professeur"])
-            if not ok_nom:
-                return
-            prenom, ok_prenom = QInputDialog.getText(
-                self, "Modifier", "Prénom :", text=item["prenom_professeur"]
-            )
-            if not ok_prenom:
-                return
-            matricule, ok_matricule = QInputDialog.getInt(
-                self, "Modifier", "Matricule :", value=item["matricule_professeur"]
-            )
-            if not ok_matricule:
-                return
-            payload = {
-                "nom_professeur": nom.strip(),
-                "prenom_professeur": prenom.strip(),
-                "matricule_professeur": matricule,
-            }
-        else:
-            field = "nom_salle" if kind == "salle" else "nom_matiere"
-            value, accepted = QInputDialog.getText(
-                self, "Modifier", "Nom :", text=item[field]
-            )
-            if not accepted or not value.strip():
-                return
-            payload = {field: value.strip()}
         try:
+            identifier = {
+                "professeur": item.get("id_professeur"),
+                "salle": item.get("id_salle"),
+                "matiere": item.get("id_matiere"),
+            }[kind]
+            if identifier is None:
+                QMessageBox.warning(self, "Modification impossible", "Identifiant introuvable.")
+                return
+            endpoint = {
+                "professeur": f"professeur/{identifier}",
+                "salle": f"salle/{identifier}",
+                "matiere": f"matiere/{identifier}",
+            }[kind]
+            if kind == "professeur":
+                nom, ok_nom = QInputDialog.getText(
+                    self, "Modifier", "Nom :", text=str(item.get("nom_professeur", ""))
+                )
+                if not ok_nom:
+                    return
+                prenom, ok_prenom = QInputDialog.getText(
+                    self, "Modifier", "Prénom :", text=str(item.get("prenom_professeur", ""))
+                )
+                if not ok_prenom:
+                    return
+                current_matricule = safe_int(item.get("matricule_professeur"), 0)
+                matricule, ok_matricule = QInputDialog.getInt(
+                    self, "Modifier", "Matricule :", value=max(0, current_matricule), min=0
+                )
+                if not ok_matricule:
+                    return
+                if not nom.strip() or not prenom.strip():
+                    QMessageBox.warning(self, "Erreur", "Le nom et le prénom sont obligatoires.")
+                    return
+                payload = {
+                    "nom_professeur": nom.strip(),
+                    "prenom_professeur": prenom.strip(),
+                    "matricule_professeur": matricule,
+                }
+            else:
+                field = "nom_salle" if kind == "salle" else "nom_matiere"
+                value, accepted = QInputDialog.getText(
+                    self, "Modifier", "Nom :", text=str(item.get(field, ""))
+                )
+                if not accepted or not value.strip():
+                    return
+                payload = {field: value.strip()}
             response = requests.put(
                 f"{API_BASE_URL}/{endpoint}",
                 json=payload,
@@ -247,26 +271,29 @@ class GestionReferentielsView(QWidget):
                 "Erreur Réseau",
                 "Le serveur est inaccessible ou a mis trop de temps à répondre.",
             )
-        except requests.RequestException as error:
-            QMessageBox.critical(self, "Erreur", str(error))
+        except (requests.RequestException, KeyError, TypeError, ValueError) as error:
+            QMessageBox.critical(self, "Erreur", f"Modification impossible : {error}")
 
     def delete_referentiel(self, kind, item):
-        identifiers = {
-            "professeur": item["id_professeur"],
-            "salle": item["id_salle"],
-            "matiere": item["id_matiere"],
-        }
-        reply = QMessageBox.question(
-            self,
-            "Confirmation",
-            "Voulez-vous vraiment supprimer cet élément ?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
         try:
+            identifier = {
+                "professeur": item.get("id_professeur"),
+                "salle": item.get("id_salle"),
+                "matiere": item.get("id_matiere"),
+            }[kind]
+            if identifier is None:
+                QMessageBox.warning(self, "Suppression impossible", "Identifiant introuvable.")
+                return
+            reply = QMessageBox.question(
+                self,
+                "Confirmation",
+                "Voulez-vous vraiment supprimer cet élément ?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
             response = requests.delete(
-                f"{API_BASE_URL}/{kind}/{identifiers[kind]}",
+                f"{API_BASE_URL}/{kind}/{identifier}",
                 timeout=API_TIMEOUT,
             )
             if response.status_code == 204:
@@ -287,8 +314,8 @@ class GestionReferentielsView(QWidget):
                 "Erreur Réseau",
                 "Le serveur est inaccessible ou a mis trop de temps à répondre.",
             )
-        except requests.RequestException as error:
-            QMessageBox.critical(self, "Erreur", str(error))
+        except (requests.RequestException, KeyError, TypeError, ValueError) as error:
+            QMessageBox.critical(self, "Erreur", f"Suppression impossible : {error}")
 
     def post(self, endpoint, payload, success):
         try:

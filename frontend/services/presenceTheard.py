@@ -13,6 +13,7 @@ from config import API_BASE_URL, API_TIMEOUT
 class PresenceThread(QThread):
     change_pixmap_signal = pyqtSignal(QImage)
     student_detected_signal = pyqtSignal(str)
+    error_signal = pyqtSignal(str)
 
     def __init__(self, id_cours):
         super().__init__()
@@ -63,8 +64,22 @@ class PresenceThread(QThread):
                     name = result.get("nom")
                     if name and name != "Inconnu":
                         self.student_detected_signal.emit(name)
+                return
+
+            detail = ""
+            try:
+                payload = response.json()
+                detail = payload.get("detail") or payload.get("message") or ""
+            except ValueError:
+                detail = response.text
+
+            if detail:
+                self.error_signal.emit(str(detail))
+            else:
+                self.error_signal.emit("Impossible d’enregistrer la présence pour ce cours.")
         except requests.RequestException as error:
             print(f"Erreur API présence : {error}")
+            self.error_signal.emit("Connexion au serveur impossible. Vérifiez le backend.")
 
     def _async_detect(self, frame):
         """Exécuté dans un thread séparé en arrière-plan sans bloquer l'affichage vidéo."""

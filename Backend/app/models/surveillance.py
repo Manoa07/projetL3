@@ -12,8 +12,8 @@ class Surveillance(Base):
         ),
     )
     Id_surveillance=Column(Integer,primary_key=True,autoincrement=True,index=True)
-    id_eleve=Column(Integer,ForeignKey("eleve.Id_eleve"))
-    id_examen=Column(Integer,ForeignKey("examen.id_examen"))
+    id_eleve=Column(Integer,ForeignKey("eleve.Id_eleve", ondelete="CASCADE"))
+    id_examen=Column(Integer,ForeignKey("examen.id_examen", ondelete="CASCADE"))
     Remarque=Column(String)
     Status_examen=Column(String)
     examen=relationship("Examen",back_populates="surveillance")

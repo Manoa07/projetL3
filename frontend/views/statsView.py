@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar,
     QGridLayout, QTableWidget, QTableWidgetItem, QGraphicsDropShadowEffect,
-    QSizePolicy, QScrollArea, QPushButton, QMessageBox
+    QSizePolicy, QScrollArea, QPushButton, QMessageBox, QComboBox
 )
 from PyQt6.QtCore import Qt, QRectF, QTimer
 from PyQt6.QtGui import QPainter, QPen, QColor, QFont
@@ -175,6 +175,53 @@ class StatsView(QWidget):
         header_layout.addWidget(self.refresh_button)
         layout.addLayout(header_layout)
 
+        selector_row = QHBoxLayout()
+        selector_row.setSpacing(12)
+        selector_label = QLabel("Cours :")
+        selector_label.setStyleSheet("border: none; font-weight:700; color:#17212b;")
+        selector_row.addWidget(selector_label)
+
+        self.course_selector = QComboBox()
+        self.course_selector.setMinimumWidth(320)
+        self.course_selector.setStyleSheet("""
+            QComboBox {
+                background: #edf4ff;
+                border: 2px solid #3b6ee8;
+                border-radius: 10px;
+                padding: 10px 36px 10px 12px;
+                color: #102a43;
+                font-weight: 600;
+            }
+            QComboBox::drop-down {
+                border: none;
+                background: transparent;
+                width: 28px;
+            }
+            QComboBox::down-arrow {
+                width: 0px;
+                height: 0px;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 7px solid #1f4fc9;
+                margin-right: 10px;
+            }
+        """)
+        self.course_selector.currentIndexChanged.connect(self.on_course_changed)
+        selector_row.addWidget(self.course_selector)
+        selector_row.addStretch()
+        layout.addLayout(selector_row)
+
+        self.course_selector.addItem("Choisir un cours", None)
+        try:
+            resp_courses = requests.get(f"{API_BASE_URL}/cours/all", timeout=API_TIMEOUT)
+            resp_courses.raise_for_status()
+            for cours in resp_courses.json() or []:
+                name = cours.get("nom_cours") or cours.get("Nom_cours") or "Cours"
+                course_id = cours.get("Id_cours", cours.get("id_cours"))
+                self.course_selector.addItem(f"{name} — {cours.get('date_cours', '')}", course_id)
+        except requests.RequestException:
+            pass
+
         # 1. Cartes de statistiques (KPI)
         kpi_layout = QHBoxLayout()
         kpi_layout.setSpacing(16)
@@ -186,10 +233,13 @@ class StatsView(QWidget):
             kpi_layout.addWidget(card)
         layout.addLayout(kpi_layout)
 
-        # Fetch global stats to populate KPI cards
         stats = {}
         try:
-            resp_stats = requests.get(f"{API_BASE_URL}/stats/presence", timeout=API_TIMEOUT)
+            course_id = self.course_selector.currentData()
+            params = {}
+            if course_id is not None:
+                params['course_id'] = course_id
+            resp_stats = requests.get(f"{API_BASE_URL}/stats/presence", timeout=API_TIMEOUT, params=params)
             resp_stats.raise_for_status()
             stats = resp_stats.json()
             total = stats.get('total_eleves', 0)
@@ -201,7 +251,6 @@ class StatsView(QWidget):
             self.card_absents.set_value(f"{absents} / {total}")
             self.card_retards.set_value(str(retards))
         except requests.RequestException:
-            # leave defaults if API unavailable
             pass
 
         # 2. Jauges circulaires (Présents / Retards / Taux)
@@ -226,6 +275,7 @@ class StatsView(QWidget):
 
         donut_layout = QHBoxLayout()
         donut_layout.setSpacing(24)
+        self.donut_widgets = {}
 
         for title_text, value, denom, color, center in [
             ("Présents", presents_val, total, '#27ae60', f"{presents_val}"),
@@ -249,6 +299,7 @@ class StatsView(QWidget):
                 value=value, maximum=denom if denom else 1.0,
                 color=color, center_text=center, thickness=12, diameter=130
             )
+            self.donut_widgets[title_text] = donut
 
             block.addWidget(t)
             block.addWidget(donut, alignment=Qt.AlignmentFlag.AlignHCenter)
@@ -322,7 +373,13 @@ class StatsView(QWidget):
 
         QTimer.singleShot(0, self.refresh_data)
 
+    def on_course_changed(self):
+        if hasattr(self, 'course_selector'):
+            self.refresh_data()
+
     def refresh_data(self):
+        if not hasattr(self, 'refresh_button'):
+            return
         self.refresh_button.setEnabled(False)
         try:
             self.load_stats_data()
@@ -334,9 +391,15 @@ class StatsView(QWidget):
                 self.refresh_button.setEnabled(True)
 
     def load_stats_data(self):
+        if not hasattr(self, 'course_selector'):
+            return
         stats = {}
         try:
-            resp_stats = requests.get(f"{API_BASE_URL}/stats/presence", timeout=API_TIMEOUT)
+            params = {}
+            course_id = self.course_selector.currentData()
+            if course_id is not None:
+                params['course_id'] = course_id
+            resp_stats = requests.get(f"{API_BASE_URL}/stats/presence", timeout=API_TIMEOUT, params=params)
             resp_stats.raise_for_status()
             stats = resp_stats.json()
         except requests.RequestException:
@@ -360,8 +423,12 @@ class StatsView(QWidget):
 
         students_map = {}
         try:
-            resp_p = requests.get(f"{API_BASE_URL}/stats/presence/presents", timeout=API_TIMEOUT)
-            resp_r = requests.get(f"{API_BASE_URL}/stats/presence/retards", timeout=API_TIMEOUT)
+            params = {}
+            course_id = self.course_selector.currentData()
+            if course_id is not None:
+                params['course_id'] = course_id
+            resp_p = requests.get(f"{API_BASE_URL}/stats/presence/presents", timeout=API_TIMEOUT, params=params)
+            resp_r = requests.get(f"{API_BASE_URL}/stats/presence/retards", timeout=API_TIMEOUT, params=params)
             resp_p.raise_for_status(); resp_r.raise_for_status()
             presents_rows = resp_p.json() or []
             retards_rows = resp_r.json() or []
@@ -383,6 +450,9 @@ class StatsView(QWidget):
                 }
         except requests.RequestException:
             students_map = {}
+
+        if not hasattr(self, 'present_table'):
+            return
 
         self.present_table.setRowCount(0)
         for row, (_, s) in enumerate(students_map.items()):

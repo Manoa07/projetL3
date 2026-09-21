@@ -12,6 +12,29 @@ from components.icon_loader import load_icon
 from components.theme import NAV_BUTTON_STYLE
 from components.theme import configure_dialog, configure_table
 from services.events import global_signals # Importation du bus d'événements
+
+
+def safe_int(value, default=0):
+    """Convertit une valeur en int sans faire planter l’interface."""
+    try:
+        if value in (None, ""):
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def schedule_async_task(coro):
+    """Planifie une coroutine dans le bon contexte Qt/asyncio."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(coro)
+        return
+
+    loop.create_task(coro)
+
+
 class ElevesView(QWidget):
     def __init__(self):
         
@@ -110,16 +133,19 @@ class ElevesView(QWidget):
         QTimer.singleShot(0, self.refresh_data)
     
     def refresh_data(self):
-        """Lance la tâche asynchrone de récupération des données"""
+        """Lance la tâche asynchrone de récupération des données."""
         async def safe_load():
             try:
-                self.refresh_button.setEnabled(False)  # Désactive le bouton pendant le chargement
+                if hasattr(self, 'refresh_button'):
+                    self.refresh_button.setEnabled(False)
                 await self.load_eleve()
             except Exception as error:
                 print("Erreur lors du rafraîchissement :", error)
             finally:
-                self.refresh_button.setEnabled(True)  # Réactive le bouton une fois le chargement terminé
-        asyncio.create_task(safe_load())
+                if hasattr(self, 'refresh_button'):
+                    self.refresh_button.setEnabled(True)
+
+        schedule_async_task(safe_load())
     
     async def load_eleve(self):
         """Récupère les élèves depuis l'API FastAPI"""
@@ -224,7 +250,7 @@ class ElevesView(QWidget):
                 "L'identifiant de cet élève est introuvable.",
             )
             return
-        asyncio.create_task(self.load_history(eleve_id, eleve))
+        schedule_async_task(self.load_history(eleve_id, eleve))
 
     def update_eleve(self, eleve):
         """Demande les informations administratives avant la mise à jour."""
@@ -245,9 +271,10 @@ class ElevesView(QWidget):
         )
         if not accepted:
             return
+        numero_value = safe_int(eleve.get("Numero_eleve"), 1)
         numero, accepted = QInputDialog.getInt(
             self, "Modifier l'élève", "Numéro :",
-            value=int(eleve.get("Numero_eleve", 0)),
+            value=max(1, numero_value),
             min=1,
         )
         if not accepted:
@@ -280,7 +307,7 @@ class ElevesView(QWidget):
                 int(matricule.strip()) if matricule.strip() else None
             ),
         }
-        asyncio.create_task(
+        schedule_async_task(
             self._send_eleve_update(eleve.get("Id_eleve"), payload)
         )
 
@@ -323,15 +350,21 @@ class ElevesView(QWidget):
     def delete_eleve(self, eleve):
         """Demande confirmation avant la suppression physique protégée."""
         eleve_id = eleve.get("Id_eleve")
+        if eleve_id is None:
+            QMessageBox.warning(
+                self,
+                "Suppression impossible",
+                "Identifiant de l’élève introuvable.",
+            )
+            return
         reply = QMessageBox.question(
             self,
             "Confirmation",
-            "Voulez-vous vraiment supprimer cet élève ? "
-            "La suppression est interdite s'il possède un historique.",
+            "Voulez-vous vraiment supprimer cet élève et toutes ses données associées ?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            asyncio.create_task(self._send_eleve_delete(eleve_id))
+            schedule_async_task(self._send_eleve_delete(eleve_id))
 
     async def _send_eleve_delete(self, eleve_id):
         timeout = httpx.Timeout(

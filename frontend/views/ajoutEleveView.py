@@ -11,6 +11,17 @@ import asyncio
 from components.icon_loader import load_icon
 
 
+def schedule_async_task(coro):
+    """Planifie une coroutine dans le bon contexte Qt/asyncio."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(coro)
+        return
+
+    loop.create_task(coro)
+
+
 class CaptureThread(QThread):
     """BUG-06 : capture de 10 photos dans un thread séparé pour ne pas bloquer l'UI."""
     frame_signal = pyqtSignal(object)   # frame courante pour preview éventuelle
@@ -164,7 +175,7 @@ class AjoutEleveView(QWidget):
                           padding: 18px; margin-top: 24px; border-radius: 12px; font-size: 14px; }
             QPushButton:hover { background-color: #1b2838; }
         """)
-        self.btn_submit.clicked.connect(lambda: asyncio.create_task(self.envoyer_donnees()))
+        self.btn_submit.clicked.connect(lambda: schedule_async_task(self.envoyer_donnees()))
         form_layout.addWidget(self.btn_submit)
 
         layout.addWidget(form_frame)

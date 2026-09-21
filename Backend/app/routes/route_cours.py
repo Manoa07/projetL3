@@ -1,9 +1,10 @@
+from datetime import date
 from typing import List
 
 from fastapi import APIRouter, status
 from DB.database import db_dependancy
 from schema.sch_cours import Create_cours, Reponse_cours 
-from services import cours_service
+from services import cours_service, presence_service
 from services.cours_service import create_cours, get_cours
 router= APIRouter(prefix="/cours",tags=["Cours"])
 
@@ -14,6 +15,15 @@ def create_cours_route(cours: Create_cours, db:db_dependancy):
 @router.get("/all",response_model=List[Reponse_cours])
 def get_cours_all(db:db_dependancy):
     return get_cours(db)
+
+
+@router.get("/{cours_id}/presence-summary")
+def get_cours_presence_summary(
+    cours_id: int,
+    date_cours: date | None = None,
+    db: db_dependancy = None,
+):
+    return presence_service.get_course_presence_summary(db, cours_id, date_cours)
 
 
 @router.put("/{cours_id}", response_model=Reponse_cours)

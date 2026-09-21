@@ -1,12 +1,17 @@
+# Interface Python / GUI
 PyQt6==6.7.1
-opencv-python==4.10.0.84
-mediapipe==0.10.14
-mtcnn==0.1.0
-keras-facenet==0.3.2
-numpy==1.26.4
-joblib==1.4.2
-scikit-learn>=1.5,<2
+qasync==0.28.0
 requests==2.32.3
 httpx==0.27.0
-qasync==0.28.0
+
+# Vision par ordinateur / détection
+opencv-python==4.10.0.84
+numpy>=2.1.3,<3.0
+mediapipe==0.10.35
+mtcnn==0.1.1
+keras-facenet==0.3.2
 ultralytics>=8.3.0,<9
+
+# Modèle IA de posture
+scikit-learn>=1.5,<2
+joblib==1.4.2

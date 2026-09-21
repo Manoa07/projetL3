@@ -190,13 +190,38 @@ class PresenceInterface(QWidget):
         self.cours_select.setVisible(False)
         self.cours_select.setStyleSheet("""
             QComboBox {
-                background: #1a1f2f;
-                border: 1px solid #2a2f45;
+                background: #edf4ff;
+                border: 2px solid #3b6ee8;
                 border-radius: 10px;
-                padding: 10px 12px;
-                color: #f4f7fb;
+                padding: 10px 36px 10px 12px;
+                color: #102a43;
+                font-weight: 600;
             }
-            QComboBox::drop-down { border: none; }
+            QComboBox:hover {
+                background: #e4f0ff;
+                border: 2px solid #2957d6;
+            }
+            QComboBox::drop-down {
+                border: none;
+                background: transparent;
+                width: 28px;
+            }
+            QComboBox::down-arrow {
+                width: 0px;
+                height: 0px;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 7px solid #1f4fc9;
+                margin-right: 10px;
+            }
+            QComboBox QAbstractItemView {
+                background: #ffffff;
+                color: #102a43;
+                selection-background-color: #dfeaff;
+                selection-color: #102a43;
+                border: 1px solid #bfd0ff;
+                border-radius: 8px;
+            }
         """)
 
         self.start_btn = QPushButton("ACTIVER LE SCAN DE PRÉSENCE")

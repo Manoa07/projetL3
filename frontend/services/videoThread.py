@@ -115,13 +115,42 @@ class VideoThread(QThread):
         except Exception as error:
             print(f"[VideoThread] Erreur de détection des gestes : {error}")
 
+    def _open_capture(self):
+        candidates = []
+        seen = set()
+
+        if isinstance(self.camera_source, (int, str)):
+            candidates.append(self.camera_source)
+
+        if self.camera_source not in (0, 1):
+            candidates.extend([0, 1])
+
+        if isinstance(self.camera_source, str) and self.camera_source.startswith("http"):
+            candidates = [self.camera_source]
+
+        ordered = []
+        for candidate in candidates:
+            key = str(candidate)
+            if key not in seen:
+                seen.add(key)
+                ordered.append(candidate)
+
+        for candidate in ordered:
+            cap = cv2.VideoCapture(candidate)
+            if cap.isOpened():
+                if self.cap is not None and self.cap.isOpened():
+                    self.cap.release()
+                self.cap = cap
+                self.camera_source = candidate
+                return True
+            cap.release()
+
+        return False
+
     def run(self):
-        self.cap = cv2.VideoCapture(self.camera_source)
-        if not self.cap.isOpened():
-            print(f"[VideoThread] Impossible d'ouvrir {self.camera_name}: {self.camera_source}")
-            return
         detector = None
         pose_detector = self._create_pose_detector()
+
         try:
             detector = YoloDetector(
                 model_path=os.getenv("YOLO_MODEL_PATH"),
@@ -133,10 +162,36 @@ class VideoThread(QThread):
             print(f"[VideoThread] YOLO indisponible, caméra sans alertes objet : {error}")
 
         try:
-            while self._run_flag and self.cap.isOpened():
+            if not self._open_capture():
+                print(f"[VideoThread] Impossible d'ouvrir {self.camera_name}: {self.camera_source}")
+                return
+
+            reconnect_attempts = 0
+            while self._run_flag:
+                if self.cap is None or not self.cap.isOpened():
+                    reconnect_attempts += 1
+                    if reconnect_attempts > 5:
+                        print(f"[VideoThread] Caméra {self.camera_name} hors service après plusieurs tentatives de reconnexion.")
+                        break
+                    time.sleep(0.5)
+                    if not self._open_capture():
+                        continue
+                    reconnect_attempts = 0
+                    continue
+
                 ok, frame = self.cap.read()
                 if not ok:
-                    break
+                    reconnect_attempts += 1
+                    if reconnect_attempts > 5:
+                        print(f"[VideoThread] Flux invalide pour {self.camera_name}, arrêt du thread.")
+                        break
+                    time.sleep(0.5)
+                    self.cap.release()
+                    self.cap = None
+                    self._open_capture()
+                    continue
+
+                reconnect_attempts = 0
                 gesture_frame = frame.copy()
                 self._emit_gesture_alerts(gesture_frame, pose_detector)
                 if detector is not None:
@@ -154,8 +209,9 @@ class VideoThread(QThread):
         finally:
             if pose_detector is not None:
                 pose_detector.close()
-            self.cap.release()
-            self.cap = None
+            if self.cap is not None:
+                self.cap.release()
+                self.cap = None
 
     def stop(self):
         self._run_flag = False

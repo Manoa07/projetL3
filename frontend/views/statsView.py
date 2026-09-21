@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QProgressBar,
     QGridLayout, QTableWidget, QTableWidgetItem, QGraphicsDropShadowEffect,
-    QSizePolicy, QScrollArea
+    QSizePolicy, QScrollArea, QPushButton, QMessageBox
 )
-from PyQt6.QtCore import Qt, QRectF
+from PyQt6.QtCore import Qt, QRectF, QTimer
 from PyQt6.QtGui import QPainter, QPen, QColor, QFont
 from components.icon_loader import load_icon
 from components.statCard import StatCard
@@ -147,7 +147,33 @@ class StatsView(QWidget):
             font-weight: 800;
             letter-spacing: 1px;
         """)
-        layout.addWidget(title)
+
+        header_layout = QHBoxLayout()
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+
+        self.refresh_button = QPushButton("Rafraîchir")
+        self.refresh_button.setIcon(load_icon("refresh"))
+        self.refresh_button.setStyleSheet("""
+            QPushButton {
+                background-color: #e8f0ff;
+                color: #2459bd;
+                border: 1px solid #bdd0f7;
+                padding: 8px 14px;
+                border-radius: 10px;
+                font-weight: 700;
+            }
+            QPushButton:hover {
+                background-color: #dbe7ff;
+            }
+            QPushButton:disabled {
+                background-color: #edf2ff;
+                color: #7a8fb8;
+            }
+        """)
+        self.refresh_button.clicked.connect(self.refresh_data)
+        header_layout.addWidget(self.refresh_button)
+        layout.addLayout(header_layout)
 
         # 1. Cartes de statistiques (KPI)
         kpi_layout = QHBoxLayout()
@@ -283,23 +309,71 @@ class StatsView(QWidget):
             }
         """)
 
-        # Fetch present + retard students and merge
+        self.present_table = present_table
+        fit_table_to_content(self.present_table)
+
+        table_vbox.addWidget(self.present_table)
+        layout.addWidget(table_frame)
+
+        layout.addStretch()
+
+        scroll_area.setWidget(content)
+        outer_layout.addWidget(scroll_area)
+
+        QTimer.singleShot(0, self.refresh_data)
+
+    def refresh_data(self):
+        self.refresh_button.setEnabled(False)
+        try:
+            self.load_stats_data()
+        except Exception as exc:
+            print(f"Erreur lors du rafraîchissement des statistiques : {exc}")
+            QMessageBox.critical(self, "Erreur", "Impossible de rafraîchir les statistiques.")
+        finally:
+            if hasattr(self, 'refresh_button'):
+                self.refresh_button.setEnabled(True)
+
+    def load_stats_data(self):
+        stats = {}
+        try:
+            resp_stats = requests.get(f"{API_BASE_URL}/stats/presence", timeout=API_TIMEOUT)
+            resp_stats.raise_for_status()
+            stats = resp_stats.json()
+        except requests.RequestException:
+            stats = {}
+
+        total = stats.get('total_eleves', 0)
+        presents = stats.get('presents', 0)
+        absents = stats.get('absents', max(total - presents, 0))
+        retards = stats.get('retards', 0)
+        taux = stats.get('taux_presence', 0.0)
+
+        if hasattr(self, 'card_taux'):
+            self.card_taux.set_value(f"{taux}%")
+            self.card_absents.set_value(f"{absents} / {total}")
+            self.card_retards.set_value(str(retards))
+
+        if hasattr(self, 'donut_widgets'):
+            self.donut_widgets.get("Présents", None).set_value(presents, total if total else 1, f"{presents}")
+            self.donut_widgets.get("Retards", None).set_value(retards, total if total else 1, f"{retards}")
+            self.donut_widgets.get("Taux (%)", None).set_value(taux, 100.0, f"{taux}%")
+
         students_map = {}
         try:
             resp_p = requests.get(f"{API_BASE_URL}/stats/presence/presents", timeout=API_TIMEOUT)
             resp_r = requests.get(f"{API_BASE_URL}/stats/presence/retards", timeout=API_TIMEOUT)
             resp_p.raise_for_status(); resp_r.raise_for_status()
-            presents = resp_p.json() or []
-            retards = resp_r.json() or []
-            for s in presents:
+            presents_rows = resp_p.json() or []
+            retards_rows = resp_r.json() or []
+            for s in presents_rows:
                 key = s.get('Id_eleve') or s.get('Numero_eleve') or f"{s.get('Nom_eleve','')}_{s.get('Prenom_eleve','')}"
                 students_map[key] = {
                     'nom': f"{s.get('Nom_eleve','')} {s.get('Prenom_eleve','')}",
                     'numero': s.get('Numero_eleve',''),
                     'status': 'Présent'
                 }
-            for s in retards:
-                key = s.get('Id_eleve') or s.get('Numero_eleve') or f"{s.get('Nom_eleve','')}_{s.get('Prenom_eleve','')}"
+            for s in retards_rows:
+                key = s.get('Id_eleve') or s.get('Numero_eleve') or f"{s.get('Nom_eleve','')}_{s.get('Nom_eleve','')}"
                 if key in students_map:
                     continue
                 students_map[key] = {
@@ -310,23 +384,16 @@ class StatsView(QWidget):
         except requests.RequestException:
             students_map = {}
 
+        self.present_table.setRowCount(0)
         for row, (_, s) in enumerate(students_map.items()):
-            present_table.insertRow(row)
-            present_table.setItem(row, 0, QTableWidgetItem(str(s['nom'])))
-            present_table.setItem(row, 1, QTableWidgetItem(str(s['numero'])))
+            self.present_table.insertRow(row)
+            self.present_table.setItem(row, 0, QTableWidgetItem(str(s['nom'])))
+            self.present_table.setItem(row, 1, QTableWidgetItem(str(s['numero'])))
             status_item = QTableWidgetItem(str(s['status']))
             if s['status'] == 'Retardataire':
                 status_item.setForeground(QColor('#e67e22'))
             else:
                 status_item.setForeground(QColor('#27ae60'))
-            present_table.setItem(row, 2, status_item)
+            self.present_table.setItem(row, 2, status_item)
 
-        fit_table_to_content(present_table)
-
-        table_vbox.addWidget(present_table)
-        layout.addWidget(table_frame)
-
-        layout.addStretch()
-
-        scroll_area.setWidget(content)
-        outer_layout.addWidget(scroll_area)
+        fit_table_to_content(self.present_table)
